@@ -1,5 +1,7 @@
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
+#include "XPLMDataAccess.h"
+#include "XPLMMenus.h"
 #include <string.h>
 #if IBM
 	#include <windows.h>
@@ -21,6 +23,7 @@ static XPLMWindowID	g_window;
 
 // Callbacks we will register when we create our window
 void				draw(XPLMWindowID in_window_id, void * in_refcon);
+int					handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_refcon);
 int					dummy_mouse_handler(XPLMWindowID in_window_id, int x, int y, int is_down, void * in_refcon) { return 0; }
 XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, int y, void * in_refcon) { return xplm_CursorDefault; }
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
@@ -29,6 +32,9 @@ void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flag
 static const char * g_pause_label = "PAUSE";
 static float g_pause_button_lbrt[4];
 
+static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
+
+void pause_sim();
 
 PLUGIN_API int XPluginStart(
 							char *		outName,
@@ -45,7 +51,7 @@ PLUGIN_API int XPluginStart(
 	params.drawWindowFunc = draw;
 	// Note on "dummy" handlers:
 	// Even if we don't want to handle these events, we have to register a "do-nothing" callback for them
-	params.handleMouseClickFunc = dummy_mouse_handler;
+	params.handleMouseClickFunc = handle_mouse;
 	params.handleRightClickFunc = dummy_mouse_handler;
 	params.handleMouseWheelFunc = dummy_wheel_handler;
 	params.handleKeyFunc = dummy_key_handler;
@@ -73,7 +79,7 @@ PLUGIN_API int XPluginStart(
 	// Limit resizing our window: maintain a minimum width/height of 100 boxels and a max width/height of 300 boxels
 	XPLMSetWindowResizingLimits(g_window, 200, 200, 300, 300);
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
-	
+
 	return g_window != NULL;
 }
 
@@ -135,3 +141,28 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 	}
 }
 
+int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_refcon)
+{
+	if (is_down == xplm_MouseDown)
+	{
+		const int is_popped_out = XPLMWindowIsPoppedOut(in_window_id);
+		if (!XPLMIsWindowInFront(in_window_id))
+		{
+			XPLMBringWindowToFront(in_window_id);
+		}
+		else
+		{
+			if (coord_in_rect(x, y, g_pause_button_lbrt))
+			{
+				pause_sim();
+			}
+		}
+	}
+
+	return 1;
+}
+
+void pause_sim()
+{
+	XPLMCommandOnce(XPLMFindCommand("sim/operation/pause_toggle"));
+}
