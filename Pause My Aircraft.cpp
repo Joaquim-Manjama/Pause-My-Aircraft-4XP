@@ -1,3 +1,5 @@
+// BASED ON SAMPLE CODE FROM https://developer.x-plane.com/sdk/plugin-sdk-sample-code/
+
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
 #include "XPLMDataAccess.h"
