@@ -6,6 +6,7 @@
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
 #include <string.h>
+#include <iostream>
 #if IBM
 	#include <windows.h>
 #endif
@@ -118,15 +119,15 @@ PLUGIN_API int XPluginStart(
 	XPLMGetScreenBoundsGlobal(&left, &top, &right, &bottom);
 	params.left = left + 500;
 	params.bottom = bottom + 500;
-	params.right = params.left + 500;
-	params.top = params.bottom + 300;
+	params.right = params.left + 400;
+	params.top = params.bottom + 250;
 	
 	g_window = XPLMCreateWindowEx(&params);
 	
 	// Position the window as a "free" floating window, which the user can drag around
 	XPLMSetWindowPositioningMode(g_window, xplm_WindowPositionFree, -1);
 	// Limit resizing our window: maintain a minimum width/height of 100 boxels and a max width/height of 300 boxels
-	XPLMSetWindowResizingLimits(g_window, 500, 300,  500, 300);
+	XPLMSetWindowResizingLimits(g_window, 400, 250,  400, 250);
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
 	XPLMSetWindowIsVisible(g_window, 0);
 
@@ -200,7 +201,24 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 		{
 			if (current_mode == ZULU_TIME)
 			{
-			
+				if (coord_in_rect(x, y, g_hour_up_btn)) {
+					g_zulu_target.hours = (g_zulu_target.hours + 1) % 24;
+				}
+				else if (coord_in_rect(x, y, g_hour_down_btn)) {
+					g_zulu_target.hours = (g_zulu_target.hours + 23) % 24;
+				}
+				else if (coord_in_rect(x, y, g_min_up_btn)) {
+					g_zulu_target.minutes = (g_zulu_target.minutes + 1) % 60;
+				}
+				else if (coord_in_rect(x, y, g_min_down_btn)) {
+					g_zulu_target.minutes = (g_zulu_target.minutes + 59) % 60;
+				}
+				else if (coord_in_rect(x, y, g_confirm_btn)) {
+					g_zulu_target.is_set = true;
+				}
+				else if (coord_in_rect(x, y, g_cancel_btn)) {
+					g_zulu_target.is_set = false;
+				}
 			}
 			else if (current_mode == WAYPOINT)
 			{
@@ -337,6 +355,7 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	int mid_y = (t + b) / 2;
 
 	char time_str[10];
+	std::snprintf(time_str, sizeof(time_str), "%02d : %02d", g_zulu_target.hours, g_zulu_target.minutes);
 
 	// Draw time string
 	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
@@ -419,6 +438,7 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	// If confirmed, show the target info
 	if (g_zulu_target.is_set) {
 		char info[50];
+		std::snprintf(info, sizeof(info), "Target set to %02d:%02d Z", g_zulu_target.hours, g_zulu_target.minutes);
 		XPLMDrawString(green, l + 20, b + 40, info, NULL, xplmFont_Proportional);
 	}
 }
