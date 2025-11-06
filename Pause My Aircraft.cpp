@@ -21,6 +21,11 @@
 // An opaque handle to the window we will create
 static XPLMWindowID	g_window;
 
+// MENU
+int g_menu_container_idx; // The index of our menu item in the Plugins menu
+XPLMMenuID g_menu_id; // The menu container we'll append all our menu items to
+void menu_handler(void*, void*);
+
 // Callbacks we will register when we create our window
 void				draw(XPLMWindowID in_window_id, void * in_refcon);
 int					handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_refcon);
@@ -44,7 +49,12 @@ PLUGIN_API int XPluginStart(
 	strcpy(outName, "Pause My Aircraft Plugin");
 	strcpy(outSig, "joaquimmanjama.pausemyaircraft");
 	strcpy(outDesc, "A plugin that pauses your aircraft for you!");
-	
+
+	// MENU
+	g_menu_container_idx = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Pause My Aircraft", 0, 0);
+	g_menu_id = XPLMCreateMenu("Pause My Aircraft", XPLMFindPluginsMenu(), g_menu_container_idx, menu_handler, NULL);
+	XPLMAppendMenuItem(g_menu_id, "Plugin Window", (void*)"Menu Item 1", 1);
+
 	XPLMCreateWindow_t params;
 	params.structSize = sizeof(params);
 	params.visible = 1;
@@ -67,18 +77,19 @@ PLUGIN_API int XPluginStart(
 	// We'll need to query for the global desktop bounds!
 	int left, bottom, right, top;
 	XPLMGetScreenBoundsGlobal(&left, &top, &right, &bottom);
-	params.left = left + 50;
-	params.bottom = bottom + 150;
-	params.right = params.left + 200;
-	params.top = params.bottom + 200;
+	params.left = left + 500;
+	params.bottom = bottom + 500;
+	params.right = params.left + 500;
+	params.top = params.bottom + 300;
 	
 	g_window = XPLMCreateWindowEx(&params);
 	
 	// Position the window as a "free" floating window, which the user can drag around
 	XPLMSetWindowPositioningMode(g_window, xplm_WindowPositionFree, -1);
 	// Limit resizing our window: maintain a minimum width/height of 100 boxels and a max width/height of 300 boxels
-	XPLMSetWindowResizingLimits(g_window, 200, 200, 300, 300);
+	XPLMSetWindowResizingLimits(g_window, 500, 300,  500, 300);
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
+	XPLMSetWindowIsVisible(g_window, 0);
 
 	return g_window != NULL;
 }
@@ -88,6 +99,9 @@ PLUGIN_API void	XPluginStop(void)
 	// Since we created the window, we'll be good citizens and clean it up
 	XPLMDestroyWindow(g_window);
 	g_window = NULL;
+
+	// MENU
+	XPLMDestroyMenu(g_menu_id);
 }
 
 PLUGIN_API void XPluginDisable(void) { }
@@ -164,5 +178,20 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 
 void pause_sim()
 {
-	XPLMCommandOnce(XPLMFindCommand("sim/operation/pause_toggle"));
+	if (!XPLMGetDatai(XPLMFindDataRef("sim/time/paused")))
+	{
+		XPLMCommandOnce(XPLMFindCommand("sim/operation/pause_toggle"));
+	}
+}
+
+// MENU
+void menu_handler(void* in_menu_ref, void* in_item_ref)
+{
+	const char* item_name = (const char*)in_item_ref;
+
+	if (!strcmp(item_name, "Menu Item 1"))
+	{
+		XPLMSetWindowIsVisible(g_window, 1);
+		XPLMBringWindowToFront(g_window);
+	}
 }
