@@ -31,6 +31,8 @@ void		menu_handler(void*, void*);
 
 // WINDOWS
 void draw_manual_mode(int l, int t, int r, int b, int char_height);
+void draw_zulu_time_mode(int l, int t, int r, int b, int char_height);
+
 
 // Callbacks we will register when we create our window
 void				draw(XPLMWindowID in_window_id, void * in_refcon);
@@ -53,6 +55,20 @@ static PauseMode current_mode;
 static const char*	g_pause_label = "PAUSE";
 static float		g_pause_button_lbrt[4];
 
+// ZULU TIME
+// --- Zulu Time Mode Data ---
+struct ZuluTimeTarget {
+	int hours;
+	int minutes;
+	bool is_set;
+};
+
+static ZuluTimeTarget g_zulu_target;
+
+// Button bounds for click detection
+static float g_hour_up_btn[4],	g_hour_down_btn[4];
+static float g_min_up_btn[4],	g_min_down_btn[4];
+static float g_confirm_btn[4],	g_cancel_btn[4];
 
 
 static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
@@ -114,7 +130,11 @@ PLUGIN_API int XPluginStart(
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
 	XPLMSetWindowIsVisible(g_window, 0);
 
+	// PLUGIN MODE
 	current_mode = MANUAL;
+
+	// ZULU TIME 
+	g_zulu_target = { 0, 0, false };
 
 	return g_window != NULL;
 }
@@ -154,6 +174,12 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 	int l, t, r, b;
 	XPLMGetWindowGeometry(in_window_id, &l, &t, &r, &b);
 
+	// ZULU TIME SCREEN
+	if (current_mode == ZULU_TIME)
+	{
+		draw_zulu_time_mode(l, t, r, b, char_height);
+	}
+
 	// MANUAL SCREEN
 	if (current_mode == MANUAL)
 	{
@@ -172,9 +198,24 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 		}
 		else
 		{
-			if (coord_in_rect(x, y, g_pause_button_lbrt))
+			if (current_mode == ZULU_TIME)
 			{
-				pause_sim();
+			
+			}
+			else if (current_mode == WAYPOINT)
+			{
+
+			}
+			else if (current_mode == TOD)
+			{
+
+			}
+			else if (current_mode == MANUAL)
+			{
+				if (coord_in_rect(x, y, g_pause_button_lbrt))
+				{
+					pause_sim();
+				}
 			}
 		}
 	}
@@ -275,4 +316,109 @@ void draw_manual_mode(int l, int t, int r, int b, int char_height)
 	int text_y = g_pause_button_lbrt[1] + (char_height * 0.5f);
 
 	XPLMDrawString(white, text_x, text_y, (char*)g_pause_label, NULL, xplmFont_Proportional);
+}
+
+// ZULU TIME MODE
+void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
+{
+	float white[] = { 1.0, 1.0, 1.0 };
+	float green[] = { 0.0, 1.0, 0.0, 1.0 };
+	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
+
+	// Title
+	XPLMDrawString(yellow, l + 20, t - 30, (char*)"ZULU TIME MODE", NULL, xplmFont_Proportional);
+
+	// Instruction
+	XPLMDrawString(white, l + 20, t - 50, (char*)"Set target Zulu time (HH:MM):", NULL, xplmFont_Proportional);
+
+	// Center region for the time input
+	int center_x = (l + r) / 2;
+	int mid_y = (t + b) / 2;
+
+	char time_str[10];
+
+	// Draw time string
+	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
+
+	// Draw hour up/down arrows
+	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 25;
+	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 40;
+
+	g_hour_down_btn[0] = center_x - 60; g_hour_down_btn[1] = mid_y - 40;
+	g_hour_down_btn[2] = center_x - 45; g_hour_down_btn[3] = mid_y - 25;
+
+	glColor4fv(green);
+	glBegin(GL_TRIANGLES);
+	{
+		// Up triangle (hour)
+		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[3]);
+		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[1]);
+		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[1]);
+
+		// Down triangle (hour)
+		glVertex2i((g_hour_down_btn[0] + g_hour_down_btn[2]) / 2, g_hour_down_btn[1]);
+		glVertex2i(g_hour_down_btn[0], g_hour_down_btn[3]);
+		glVertex2i(g_hour_down_btn[2], g_hour_down_btn[3]);
+	}
+	glEnd();
+
+	// Draw minute up/down arrows
+	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 25;
+	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 40;
+
+	g_min_down_btn[0] = center_x + 45; g_min_down_btn[1] = mid_y - 40;
+	g_min_down_btn[2] = center_x + 60; g_min_down_btn[3] = mid_y - 25;
+
+	glBegin(GL_TRIANGLES);
+	{
+		// Up triangle (minute)
+		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[3]);
+		glVertex2i(g_min_up_btn[0], g_min_up_btn[1]);
+		glVertex2i(g_min_up_btn[2], g_min_up_btn[1]);
+
+		// Down triangle (minute)
+		glVertex2i((g_min_down_btn[0] + g_min_down_btn[2]) / 2, g_min_down_btn[1]);
+		glVertex2i(g_min_down_btn[0], g_min_down_btn[3]);
+		glVertex2i(g_min_down_btn[2], g_min_down_btn[3]);
+	}
+	glEnd();
+
+	// Confirm and Cancel buttons
+	const char* confirm_label = "CONFIRM";
+	const char* cancel_label = "CANCEL";
+
+	float confirm_w = XPLMMeasureString(xplmFont_Proportional, confirm_label, strlen(confirm_label));
+	float cancel_w = XPLMMeasureString(xplmFont_Proportional, cancel_label, strlen(cancel_label));
+
+	g_confirm_btn[0] = center_x - confirm_w - 20; g_confirm_btn[1] = b + 20;
+	g_confirm_btn[2] = g_confirm_btn[0] + confirm_w + 20; g_confirm_btn[3] = g_confirm_btn[1] + 25;
+
+	g_cancel_btn[0] = center_x + 20; g_cancel_btn[1] = b + 20;
+	g_cancel_btn[2] = g_cancel_btn[0] + cancel_w + 20; g_cancel_btn[3] = g_cancel_btn[1] + 25;
+
+	// Draw button boxes
+	glColor4fv(gray);
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_confirm_btn[0], g_confirm_btn[1]);
+	glVertex2i(g_confirm_btn[2], g_confirm_btn[1]);
+	glVertex2i(g_confirm_btn[2], g_confirm_btn[3]);
+	glVertex2i(g_confirm_btn[0], g_confirm_btn[3]);
+	glEnd();
+
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_cancel_btn[0], g_cancel_btn[1]);
+	glVertex2i(g_cancel_btn[2], g_cancel_btn[1]);
+	glVertex2i(g_cancel_btn[2], g_cancel_btn[3]);
+	glVertex2i(g_cancel_btn[0], g_cancel_btn[3]);
+	glEnd();
+
+	XPLMDrawString(white, g_confirm_btn[0] + 10, g_confirm_btn[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_cancel_btn[0] + 10, g_cancel_btn[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
+
+	// If confirmed, show the target info
+	if (g_zulu_target.is_set) {
+		char info[50];
+		XPLMDrawString(green, l + 20, b + 40, info, NULL, xplmFont_Proportional);
+	}
 }
