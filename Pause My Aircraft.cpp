@@ -381,31 +381,32 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
 
 	// Draw hour up/down arrows
-	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 40; // 25
-	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 25; // 40
+	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 25;
+	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 40;
 
 	g_hour_down_btn[0] = center_x - 60; g_hour_down_btn[1] = mid_y - 40;
 	g_hour_down_btn[2] = center_x - 45; g_hour_down_btn[3] = mid_y - 25;
 
 	// Draw minute up/down arrows
-	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 40; //25
-	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 25; // 40
+	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 25;
+	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 40;
 
 	g_min_down_btn[0] = center_x + 45; g_min_down_btn[1] = mid_y - 40;
 	g_min_down_btn[2] = center_x + 60; g_min_down_btn[3] = mid_y - 25;
 
 	glColor4fv(green);
+	glDisable(GL_CULL_FACE);
 	glBegin(GL_TRIANGLES);
 	{
 		// Up triangle (hour)
-		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[1]);
-		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[3]); // 3
-		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[3]); // 3
+		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[3]);
+		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[1]);
+		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[1]);
 
 		// Up triangle (minute)
-		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[1]);
-		glVertex2i(g_min_up_btn[0], g_min_up_btn[3]); // 3
-		glVertex2i(g_min_up_btn[2], g_min_up_btn[3]); // 3
+		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[3]);
+		glVertex2i(g_min_up_btn[0], g_min_up_btn[1]);
+		glVertex2i(g_min_up_btn[2], g_min_up_btn[1]);
 	}
 	glEnd();
 
@@ -466,11 +467,15 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 
 float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
 {
-	// check every time this function runs
-	if (check_time_to_pause(g_zulu_target.hours, g_zulu_target.minutes))
+	if (g_zulu_target.is_set)
 	{
-		pause_sim(); // pause when time matches
-		XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+		// check every time this function runs
+		if (check_time_to_pause(g_zulu_target.hours, g_zulu_target.minutes))
+		{
+			pause_sim(); // pause when time matches
+			g_zulu_target.is_set = false;
+			XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+		}
 	}
 
 	return 10.0f;  // run again in 10 seconds
