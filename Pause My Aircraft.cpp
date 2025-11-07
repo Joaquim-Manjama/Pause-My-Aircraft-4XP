@@ -5,8 +5,12 @@
 #include "XPLMGraphics.h"
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
+#include "XPLMProcessing.h"
 #include <string.h>
 #include <iostream>
+
+#include "utilities.h"
+
 #if IBM
 	#include <windows.h>
 #endif
@@ -43,12 +47,16 @@ XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, i
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
 void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void * in_refcon, int losing_focus) { }
 
+// Other Callbacks
+float flight_loop_callback(float, float, int, void*);
+
 // PLUGIN MODE
 typedef enum {
 	ZULU_TIME = 0,
 	WAYPOINT = 1,
 	TOD = 2,
-	MANUAL = 3
+	MANUAL = 3,
+	ABOUT = 4
 } PauseMode;
 static PauseMode current_mode;
 
@@ -94,6 +102,7 @@ PLUGIN_API int XPluginStart(
 	XPLMAppendMenuItem(g_menu_id, "Waypoint", (void*)"Menu Item 2", 1);
 	XPLMAppendMenuItem(g_menu_id, "TOD", (void*)"Menu Item 3", 1);
 	XPLMAppendMenuItem(g_menu_id, "Manual", (void*)"Menu Item 4", 1);
+	XPLMAppendMenuItem(g_menu_id, "About", (void*)"Menu Item 5", 1);
 
 	XPLMCreateWindow_t params;
 	params.structSize = sizeof(params);
@@ -131,6 +140,7 @@ PLUGIN_API int XPluginStart(
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
 	XPLMSetWindowIsVisible(g_window, 0);
 
+
 	// PLUGIN MODE
 	current_mode = MANUAL;
 
@@ -149,6 +159,9 @@ PLUGIN_API void	XPluginStop(void)
 
 	// MENU
 	XPLMDestroyMenu(g_menu_id);
+
+	// OTHER CALLBACKS
+	XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 }
 
 PLUGIN_API void XPluginDisable(void) { } // XPLUGIN_DISABLE
@@ -164,8 +177,8 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 						 0 /* 0 texture units */,
 						 0 /* no lighting */,
 						 0 /* no alpha testing */,
-						 1 /* do alpha blend */,
-						 1 /* do depth testing */,
+						 0 /* do alpha blend */,
+						 0 /* do depth testing */,
 						 0 /* no depth writing */
 						 );
 	
@@ -215,9 +228,11 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 				}
 				else if (coord_in_rect(x, y, g_confirm_btn)) {
 					g_zulu_target.is_set = true;
+					XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn)) {
 					g_zulu_target.is_set = false;
+					XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 				}
 			}
 			else if (current_mode == WAYPOINT)
@@ -272,6 +287,10 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 	else if (!strcmp((const char*)in_item_ref, "Menu Item 4"))
 	{
 		current_mode = MANUAL;
+	}
+	else if (!strcmp((const char*)in_item_ref, "Menu Item 5"))
+	{
+		current_mode = ABOUT;
 	}
 }
 
@@ -339,8 +358,9 @@ void draw_manual_mode(int l, int t, int r, int b, int char_height)
 // ZULU TIME MODE
 void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 {
-	float white[] = { 1.0, 1.0, 1.0 };
-	float green[] = { 0.0, 1.0, 0.0, 1.0 };
+	float white[] = { 1.0f, 1.0f, 1.0f };
+	float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+	float red[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
 	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
 
@@ -361,40 +381,41 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
 
 	// Draw hour up/down arrows
-	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 25;
-	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 40;
+	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 40; // 25
+	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 25; // 40
 
 	g_hour_down_btn[0] = center_x - 60; g_hour_down_btn[1] = mid_y - 40;
 	g_hour_down_btn[2] = center_x - 45; g_hour_down_btn[3] = mid_y - 25;
+
+	// Draw minute up/down arrows
+	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 40; //25
+	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 25; // 40
+
+	g_min_down_btn[0] = center_x + 45; g_min_down_btn[1] = mid_y - 40;
+	g_min_down_btn[2] = center_x + 60; g_min_down_btn[3] = mid_y - 25;
 
 	glColor4fv(green);
 	glBegin(GL_TRIANGLES);
 	{
 		// Up triangle (hour)
-		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[3]);
-		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[1]);
-		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[1]);
+		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[1]);
+		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[3]); // 3
+		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[3]); // 3
 
+		// Up triangle (minute)
+		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[1]);
+		glVertex2i(g_min_up_btn[0], g_min_up_btn[3]); // 3
+		glVertex2i(g_min_up_btn[2], g_min_up_btn[3]); // 3
+	}
+	glEnd();
+
+	glColor4fv(red);
+	glBegin(GL_TRIANGLES);
+	{
 		// Down triangle (hour)
 		glVertex2i((g_hour_down_btn[0] + g_hour_down_btn[2]) / 2, g_hour_down_btn[1]);
 		glVertex2i(g_hour_down_btn[0], g_hour_down_btn[3]);
 		glVertex2i(g_hour_down_btn[2], g_hour_down_btn[3]);
-	}
-	glEnd();
-
-	// Draw minute up/down arrows
-	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 25;
-	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 40;
-
-	g_min_down_btn[0] = center_x + 45; g_min_down_btn[1] = mid_y - 40;
-	g_min_down_btn[2] = center_x + 60; g_min_down_btn[3] = mid_y - 25;
-
-	glBegin(GL_TRIANGLES);
-	{
-		// Up triangle (minute)
-		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[3]);
-		glVertex2i(g_min_up_btn[0], g_min_up_btn[1]);
-		glVertex2i(g_min_up_btn[2], g_min_up_btn[1]);
 
 		// Down triangle (minute)
 		glVertex2i((g_min_down_btn[0] + g_min_down_btn[2]) / 2, g_min_down_btn[1]);
@@ -439,6 +460,18 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	if (g_zulu_target.is_set) {
 		char info[50];
 		std::snprintf(info, sizeof(info), "Target set to %02d:%02d Z", g_zulu_target.hours, g_zulu_target.minutes);
-		XPLMDrawString(green, l + 20, b + 40, info, NULL, xplmFont_Proportional);
+		XPLMDrawString(green, l + 15, b + 65, info, NULL, xplmFont_Proportional);
 	}
+}
+
+float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
+{
+	// check every time this function runs
+	if (check_time_to_pause(g_zulu_target.hours, g_zulu_target.minutes))
+	{
+		pause_sim(); // pause when time matches
+		XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+	}
+
+	return 10.0f;  // run again in 10 seconds
 }
