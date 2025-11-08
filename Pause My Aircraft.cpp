@@ -37,6 +37,7 @@ void		menu_handler(void*, void*);
 // WINDOWS
 void draw_manual_mode(int l, int t, int r, int b, int char_height);
 void draw_zulu_time_mode(int l, int t, int r, int b, int char_height);
+void draw_waypoint_mode(int l, int t, int r, int b, int char_height);
 
 
 // Callbacks we will register when we create our window
@@ -45,7 +46,7 @@ int					handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void*
 int					dummy_mouse_handler(XPLMWindowID in_window_id, int x, int y, int is_down, void * in_refcon) { return 0; }
 XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, int y, void * in_refcon) { return xplm_CursorDefault; }
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
-void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void * in_refcon, int losing_focus) { }
+void				handle_key(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void* in_refcon, int losing_focus);
 
 // Other Callbacks
 float flight_loop_callback(float, float, int, void*);
@@ -78,6 +79,27 @@ static ZuluTimeTarget g_zulu_target;
 static float g_hour_up_btn[4],	g_hour_down_btn[4];
 static float g_min_up_btn[4],	g_min_down_btn[4];
 static float g_confirm_btn[4],	g_cancel_btn[4];
+
+// WAYPOINT MODE
+struct WaypointTarget {
+	char name[10];
+	int distance_nm;
+	bool is_set;
+};
+
+WaypointTarget g_waypoint_target;
+
+// Button coordinate arrays
+float g_nm_up_btn[4];
+float g_nm_down_btn[4];
+float g_nm_up_btn5[4];
+float g_nm_down_btn5[4];
+float g_confirm_btn_wp[4];
+float g_cancel_btn_wp[4];
+
+// Text input
+bool g_typing_waypoint = false;    // Whether we’re currently typing
+char g_waypoint_input[10] = "";    // Temp buffer for typing
 
 
 static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
@@ -113,7 +135,7 @@ PLUGIN_API int XPluginStart(
 	params.handleMouseClickFunc = handle_mouse;
 	params.handleRightClickFunc = dummy_mouse_handler;
 	params.handleMouseWheelFunc = dummy_wheel_handler;
-	params.handleKeyFunc = dummy_key_handler;
+	params.handleKeyFunc = handle_key;
 	params.handleCursorFunc = dummy_cursor_status_handler;
 	params.refcon = NULL;
 	params.layer = xplm_WindowLayerFloatingWindows;
@@ -140,12 +162,14 @@ PLUGIN_API int XPluginStart(
 	XPLMSetWindowTitle(g_window, "Pause My Aircraft");
 	XPLMSetWindowIsVisible(g_window, 0);
 
-
 	// PLUGIN MODE
 	current_mode = MANUAL;
 
 	// ZULU TIME 
 	g_zulu_target = { 0, 0, false };
+
+	// WAYPOINT MODE
+	g_waypoint_target = { "", 0, false };
 
 	return g_window != NULL;
 }
@@ -194,6 +218,12 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 		draw_zulu_time_mode(l, t, r, b, char_height);
 	}
 
+	// WAYPOINT SCREEN
+	if (current_mode == WAYPOINT)
+	{
+		draw_waypoint_mode(l, t, r, b, char_height);
+	}
+
 	// MANUAL SCREEN
 	if (current_mode == MANUAL)
 	{
@@ -203,6 +233,12 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 
 int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_refcon)
 {
+	int l, t, r, b;
+	XPLMGetWindowGeometry(in_window_id, &l, &t, &r, &b);
+	int mid_y = ((t + b) / 2) - 40;
+
+	float bounds[4] = {110, mid_y, 120, mid_y + 10};
+
 	if (is_down == xplm_MouseDown)
 	{
 		const int is_popped_out = XPLMWindowIsPoppedOut(in_window_id);
@@ -237,7 +273,45 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			}
 			else if (current_mode == WAYPOINT)
 			{
-
+				if (coord_in_rect(x, y, bounds)) {
+					g_typing_waypoint = true;
+					std::strcpy(g_waypoint_input, g_waypoint_target.name);
+				}
+				else if (coord_in_rect(x, y, g_nm_up_btn))
+				{
+					g_waypoint_target.distance_nm += 1;
+				}
+				else if (coord_in_rect(x, y, g_nm_down_btn))
+				{
+					if (g_waypoint_target.distance_nm > 0)
+					{
+						g_waypoint_target.distance_nm -= 1;
+					}
+				}
+				else if (coord_in_rect(x, y, g_nm_up_btn5))
+				{
+					g_waypoint_target.distance_nm += 5;
+				}
+				else if (coord_in_rect(x, y, g_nm_down_btn))
+				{
+					if (g_waypoint_target.distance_nm > 4)
+					{
+						g_waypoint_target.distance_nm -= 5;
+					}
+				}
+				else if (coord_in_rect(x, y, g_confirm_btn_wp))
+				{
+					// check if the waypoing exists
+					g_waypoint_target.is_set = true;
+				}
+				else if (coord_in_rect(x, y, g_cancel_btn_wp))
+				{
+					g_waypoint_target.is_set = false;
+				}
+				else
+				{
+					g_typing_waypoint = false;
+				}
 			}
 			else if (current_mode == TOD)
 			{
@@ -255,6 +329,36 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 
 	return 1;
 }
+
+void handle_key(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void* in_refcon, int losing_focus)
+{
+	if (g_typing_waypoint)
+	{
+		if (key == XPLM_VK_RETURN || key == XPLM_VK_ENTER)
+		{
+			std::strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name));
+			g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
+			g_typing_waypoint = false;
+		}
+		else if (key == XPLM_VK_ESCAPE)
+		{
+			g_typing_waypoint = false;
+		}
+		else if (key == XPLM_VK_BACK)
+		{
+			int len = std::strlen(g_waypoint_input);
+			if (len > 0)
+				g_waypoint_input[len - 1] = '\0';
+		}
+		else if (std::isprint((unsigned char)key) && std::strlen(g_waypoint_input) < sizeof(g_waypoint_input) - 1)
+		{
+			size_t len = std::strlen(g_waypoint_input);
+			g_waypoint_input[len] = key;
+			g_waypoint_input[len + 1] = '\0';
+		}
+	}
+}
+
 
 void pause_sim()
 {
@@ -465,6 +569,130 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	}
 }
 
+// WAYPOINT MODE
+void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
+{
+	float white[] = { 1.0, 1.0, 1.0, 1.0 };
+	float green[] = { 0.0, 1.0, 0.0, 1.0 };
+	float red[] = { 1.0, 0.0, 0.0, 1.0 };
+	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
+
+	int center_x = (l + r) / 2;
+	int mid_y = (t + b) / 2;
+
+	// Title
+	XPLMDrawString(yellow, l + 20, t - 30, (char*)"WAYPOINT MODE", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, l + 20, t - 50, (char*)"Set distance and waypoint:", NULL, xplmFont_Proportional);
+
+	// Distance input display
+	char dist_str[20];
+	std::snprintf(dist_str, sizeof(dist_str), "%d NM", g_waypoint_target.distance_nm);
+	XPLMDrawString(white, center_x - 25, mid_y, dist_str, NULL, xplmFont_Proportional);
+
+	// Waypoint label
+	XPLMDrawString(white, l + 20, mid_y - 40, (char*)"Waypoint:", NULL, xplmFont_Proportional);
+
+	// Waypoint text box (typing support)
+	if (g_typing_waypoint)
+	{
+		char buffer[20];
+		std::snprintf(buffer, sizeof(buffer), "[%s_]", g_waypoint_input);
+		XPLMDrawString(yellow, l + 110, mid_y - 40, buffer, NULL, xplmFont_Proportional);
+	}
+	else
+	{
+		XPLMDrawString(green, l + 110, mid_y - 40,
+			g_waypoint_target.name[0] ? g_waypoint_target.name : (char*)"<Click to enter>", NULL, xplmFont_Proportional);
+	}
+
+	// Up/Down arrows for distance
+	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 25;
+	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 40;
+
+	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 40;
+	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y - 25;
+
+	g_nm_up_btn5[0] = center_x + 75; g_nm_up_btn5[1] = mid_y + 25;
+	g_nm_up_btn5[2] = center_x + 90; g_nm_up_btn5[3] = mid_y + 40;
+
+	g_nm_down_btn5[0] = center_x + 75; g_nm_down_btn5[1] = mid_y - 40;
+	g_nm_down_btn5[2] = center_x + 90; g_nm_down_btn5[3] = mid_y - 25;
+
+	// Draw triangles
+	glColor4fv(green);
+	glDisable(GL_CULL_FACE);
+	glBegin(GL_TRIANGLES);
+	{
+		glVertex2i((g_nm_up_btn[0] + g_nm_up_btn[2]) / 2, g_nm_up_btn[3]);
+		glVertex2i(g_nm_up_btn[0], g_nm_up_btn[1]);
+		glVertex2i(g_nm_up_btn[2], g_nm_up_btn[1]);
+
+		glVertex2i((g_nm_up_btn5[0] + g_nm_up_btn5[2]) / 2, g_nm_up_btn5[3]);
+		glVertex2i(g_nm_up_btn5[0], g_nm_up_btn5[1]);
+		glVertex2i(g_nm_up_btn5[2], g_nm_up_btn5[1]);
+	}
+	glEnd();
+
+	glColor4fv(red);
+	glBegin(GL_TRIANGLES);
+	{
+		glVertex2i((g_nm_down_btn[0] + g_nm_down_btn[2]) / 2, g_nm_down_btn[1]);
+		glVertex2i(g_nm_down_btn[0], g_nm_down_btn[3]);
+		glVertex2i(g_nm_down_btn[2], g_nm_down_btn[3]);
+
+		glVertex2i((g_nm_down_btn5[0] + g_nm_down_btn5[2]) / 2, g_nm_down_btn5[1]);
+		glVertex2i(g_nm_down_btn5[0], g_nm_down_btn5[3]);
+		glVertex2i(g_nm_down_btn5[2], g_nm_down_btn5[3]);
+	}
+	glEnd();
+
+	// Confirm & Cancel buttons
+	const char* confirm_label = "CONFIRM";
+	const char* cancel_label = "CANCEL";
+
+	float confirm_w = XPLMMeasureString(xplmFont_Proportional, confirm_label, strlen(confirm_label));
+	float cancel_w = XPLMMeasureString(xplmFont_Proportional, cancel_label, strlen(cancel_label));
+
+	g_confirm_btn_wp[0] = center_x - confirm_w - 20; g_confirm_btn_wp[1] = b + 20;
+	g_confirm_btn_wp[2] = g_confirm_btn_wp[0] + confirm_w + 20; g_confirm_btn_wp[3] = g_confirm_btn_wp[1] + 25;
+
+	g_cancel_btn_wp[0] = center_x + 20; g_cancel_btn_wp[1] = b + 20;
+	g_cancel_btn_wp[2] = g_cancel_btn_wp[0] + cancel_w + 20; g_cancel_btn_wp[3] = g_cancel_btn_wp[1] + 25;
+
+	// Draw button boxes
+	glColor4fv(gray);
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[1]);
+	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[1]);
+	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[3]);
+	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[3]);
+	glEnd();
+
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[1]);
+	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[1]);
+	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[3]);
+	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[3]);
+	glEnd();
+
+	XPLMDrawString(white, g_confirm_btn_wp[0] + 10, g_confirm_btn_wp[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_cancel_btn_wp[0] + 10, g_cancel_btn_wp[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
+
+	XPLMDrawString(white, g_nm_up_btn[0], g_nm_up_btn[3] + 7, "+1", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_nm_up_btn5[0], g_nm_up_btn5[3] + 7, "+5", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_nm_down_btn[0], g_nm_down_btn[1] - 7 - char_height, "-1", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_nm_down_btn5[0], g_nm_down_btn5[1] - 7 - char_height, "-5", NULL, xplmFont_Proportional);
+
+	// If confirmed, show target info
+	if (g_waypoint_target.is_set)
+	{
+		char info[60];
+		std::snprintf(info, sizeof(info), "Target: %s at %d NM", g_waypoint_target.name, g_waypoint_target.distance_nm);
+		XPLMDrawString(green, l + 15, b + 50, info, NULL, xplmFont_Proportional);
+	}
+}
+
 float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
 {
 	if (g_zulu_target.is_set)
@@ -472,8 +700,8 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 		// check every time this function runs
 		if (check_time_to_pause(g_zulu_target.hours, g_zulu_target.minutes))
 		{
-			pause_sim(); // pause when time matches
 			g_zulu_target.is_set = false;
+			pause_sim(); // pause when time matches
 			XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 		}
 	}
