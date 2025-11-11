@@ -272,8 +272,15 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			else if (current_mode == WAYPOINT)
 			{
 				if (coord_in_rect(x, y, g_click_here_box)) {
-					g_typing_waypoint = true;
-					g_waypoint_input[0] = '\0';
+					if (g_typing_waypoint)
+					{
+						g_typing_waypoint = false;
+					}
+					else
+					{
+						g_typing_waypoint = true;
+						g_waypoint_input[0] = '\0';
+					}
 				}
 				else if (coord_in_rect(x, y, g_nm_up_btn))
 				{
@@ -308,6 +315,8 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 				}
 				else
 				{
+					strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name) - 1);
+					g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
 					g_typing_waypoint = false;
 				}
 			}
@@ -602,6 +611,8 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 		char buffer[20];
 		std::snprintf(buffer, sizeof(buffer), "[%s_]", g_waypoint_input);
 		XPLMDrawString(yellow, l + 110, mid_y - 40, buffer, NULL, xplmFont_Proportional);
+		XPLMDrawString(white, g_click_here_box[0] - 5, g_click_here_box[1] - 12,
+			(char*)"*Press Enter to Confirm*", NULL, xplmFont_Proportional);
 	}
 	else
 	{
@@ -717,30 +728,38 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 	if (!g_typing_waypoint)
 		return 0; // let X-Plane handle it normally
 
+	// Only process on key press, ignore repeats and releases
+	if ((inFlags & xplm_DownFlag) == 0)
+		return 1; // block from going to X-Plane but don’t process
+
 	// Handle Enter key
-	if (inChar == '\r' || inChar == '\n') {
+	if (inChar == '\r' || inChar == '\n')
+	{
 		strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name) - 1);
 		g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
-		g_waypoint_target.is_set = true;
 		g_typing_waypoint = false;
-		return 1; // handled
+		return 1; // stop X-Plane from seeing it
 	}
 
 	// Handle backspace
-	if (inChar == 8 && strlen(g_waypoint_input) > 0) {
+	if (inChar == 8 && strlen(g_waypoint_input) > 0)
+	{
 		g_waypoint_input[strlen(g_waypoint_input) - 1] = '\0';
-		return 1; // handled
+		return 1;
 	}
 
-	// Handle printable characters
-	if (inChar >= 32 && inChar <= 126) {
+	// Handle printable characters (ignore control chars)
+	if (inChar >= 32 && inChar <= 126)
+	{
 		size_t len = strlen(g_waypoint_input);
-		if (len < sizeof(g_waypoint_input) - 1) {
+		if (len < sizeof(g_waypoint_input) - 1)
+		{
 			g_waypoint_input[len] = inChar;
 			g_waypoint_input[len + 1] = '\0';
 		}
-		return 1; // handled
+		return 1;
 	}
 
 	return 1; // block everything else
 }
+
