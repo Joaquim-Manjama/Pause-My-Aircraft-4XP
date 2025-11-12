@@ -445,9 +445,6 @@ void draw_manual_mode(int l, int t, int r, int b, int char_height)
 	int text_y = g_pause_button_lbrt[1] + (char_height * 0.5f);
 
 	XPLMDrawString(white, text_x, text_y, (char*)g_pause_label, NULL, xplmFont_Proportional);
-	XPLMDrawString(white, text_x - 30, text_y - 15, (char *)plugin_path, NULL, xplmFont_Proportional);
-	XPLMDrawString(white, text_x - 30, text_y - 30, (char*)clean_path(plugin_path, "Waypoints.txt").c_str(), NULL, xplmFont_Proportional);
-	XPLMDrawString(white, text_x - 30, text_y - 45, (char*)waypoint_file.c_str(), NULL, xplmFont_Proportional);
 }
 
 // ZULU TIME MODE
