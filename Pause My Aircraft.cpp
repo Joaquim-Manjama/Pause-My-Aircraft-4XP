@@ -6,6 +6,7 @@
 #include "XPLMDataAccess.h"
 #include "XPLMMenus.h"
 #include "XPLMProcessing.h"
+#include "XPLMPlugin.h"
 #include <string.h>
 #include <iostream>
 
@@ -46,7 +47,7 @@ int					handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void*
 int					dummy_mouse_handler(XPLMWindowID in_window_id, int x, int y, int is_down, void * in_refcon) { return 0; }
 XPLMCursorStatus	dummy_cursor_status_handler(XPLMWindowID in_window_id, int x, int y, void * in_refcon) { return xplm_CursorDefault; }
 int					dummy_wheel_handler(XPLMWindowID in_window_id, int x, int y, int wheel, int clicks, void * in_refcon) { return 0; }
-void				handle_key(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void* in_refcon, int losing_focus);
+void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void* in_refcon, int losing_focus) {};
 
 // Other Callbacks
 float flight_loop_callback(float, float, int, void*);
@@ -103,6 +104,10 @@ float g_click_here_box[4];
 bool g_typing_waypoint = false;    // Whether we’re currently typing
 char g_waypoint_input[10] = "";    // Temp buffer for typing
 
+// FILE PATHS
+char plugin_path[512];
+std::string waypoint_file;
+
 
 static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
 
@@ -137,7 +142,7 @@ PLUGIN_API int XPluginStart(
 	params.handleMouseClickFunc = handle_mouse;
 	params.handleRightClickFunc = dummy_mouse_handler;
 	params.handleMouseWheelFunc = dummy_wheel_handler;
-	params.handleKeyFunc = handle_key;
+	params.handleKeyFunc = dummy_key_handler;
 	params.handleCursorFunc = dummy_cursor_status_handler;
 	params.refcon = NULL;
 	params.layer = xplm_WindowLayerFloatingWindows;
@@ -173,6 +178,10 @@ PLUGIN_API int XPluginStart(
 	// WAYPOINT MODE
 	g_waypoint_target = { "", 0, false };
 	XPLMRegisterKeySniffer(myKeySniffer, 1, NULL); // 1 = before X-Plane gets keys
+
+	// FILE PATHS
+	XPLMGetPluginInfo(XPLMGetMyID(), NULL, plugin_path, NULL, NULL);
+	waypoint_file = clean_path(plugin_path, "Waypoints.txt");
 
 	return g_window != NULL;
 }
@@ -306,8 +315,10 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 				}
 				else if (coord_in_rect(x, y, g_confirm_btn_wp))
 				{
-					// check if the waypoing exists
-					g_waypoint_target.is_set = true;
+					if (is_valid_waypoint(std::string(g_waypoint_target.name), waypoint_file))
+					{
+						g_waypoint_target.is_set = true;
+					}
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn_wp))
 				{
@@ -336,36 +347,6 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 
 	return 1;
 }
-
-void handle_key(XPLMWindowID in_window_id, char key, XPLMKeyFlags flags, char virtual_key, void* in_refcon, int losing_focus)
-{
-	/*if (g_typing_waypoint)
-	{
-		if (key == XPLM_VK_RETURN || key == XPLM_VK_ENTER)
-		{
-			std::strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name));
-			g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
-			g_typing_waypoint = false;
-		}
-		else if (key == XPLM_VK_ESCAPE)
-		{
-			g_typing_waypoint = false;
-		}
-		else if (key == XPLM_VK_BACK)
-		{
-			int len = std::strlen(g_waypoint_input);
-			if (len > 0)
-				g_waypoint_input[len - 1] = '\0';
-		}
-		else if (std::isprint((unsigned char)key) && std::strlen(g_waypoint_input) < sizeof(g_waypoint_input) - 1)
-		{
-			size_t len = std::strlen(g_waypoint_input);
-			g_waypoint_input[len] = key;
-			g_waypoint_input[len + 1] = '\0';
-		}
-	}*/
-}
-
 
 void pause_sim()
 {
@@ -464,6 +445,9 @@ void draw_manual_mode(int l, int t, int r, int b, int char_height)
 	int text_y = g_pause_button_lbrt[1] + (char_height * 0.5f);
 
 	XPLMDrawString(white, text_x, text_y, (char*)g_pause_label, NULL, xplmFont_Proportional);
+	XPLMDrawString(white, text_x - 30, text_y - 15, (char *)plugin_path, NULL, xplmFont_Proportional);
+	XPLMDrawString(white, text_x - 30, text_y - 30, (char*)clean_path(plugin_path, "Waypoints.txt").c_str(), NULL, xplmFont_Proportional);
+	XPLMDrawString(white, text_x - 30, text_y - 45, (char*)waypoint_file.c_str(), NULL, xplmFont_Proportional);
 }
 
 // ZULU TIME MODE
@@ -707,6 +691,7 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	}
 }
 
+// CALLBACKS
 float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
 {
 	if (g_zulu_target.is_set)
@@ -726,11 +711,11 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon)
 {
 	if (!g_typing_waypoint)
-		return 0; // let X-Plane handle it normally
+		return 1; // let X-Plane handle it normally
 
 	// Only process on key press, ignore repeats and releases
 	if ((inFlags & xplm_DownFlag) == 0)
-		return 1; // block from going to X-Plane but don’t process
+		return 0; // block from going to X-Plane but don’t process
 
 	// Handle Enter key
 	if (inChar == '\r' || inChar == '\n')
@@ -738,14 +723,14 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 		strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name) - 1);
 		g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
 		g_typing_waypoint = false;
-		return 1; // stop X-Plane from seeing it
+		return 0; // stop X-Plane from seeing it
 	}
 
 	// Handle backspace
 	if (inChar == 8 && strlen(g_waypoint_input) > 0)
 	{
 		g_waypoint_input[strlen(g_waypoint_input) - 1] = '\0';
-		return 1;
+		return 0;
 	}
 
 	// Handle printable characters (ignore control chars)
@@ -754,12 +739,12 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 		size_t len = strlen(g_waypoint_input);
 		if (len < sizeof(g_waypoint_input) - 1)
 		{
-			g_waypoint_input[len] = inChar;
+			g_waypoint_input[len] = (char) toupper(inChar);
 			g_waypoint_input[len + 1] = '\0';
 		}
-		return 1;
+		return 0;
 	}
 
-	return 1; // block everything else
+	return 0; // block everything else
 }
 
