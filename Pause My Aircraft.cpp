@@ -67,6 +67,9 @@ static PauseMode current_mode;
 static const char*	g_pause_label = "PAUSE";
 static float		g_pause_button_lbrt[4];
 
+// PLAYER
+float g_player_pos[2];
+
 // ZULU TIME
 // --- Zulu Time Mode Data ---
 struct ZuluTimeTarget {
@@ -87,6 +90,7 @@ struct WaypointTarget {
 	char name[10];
 	int distance_nm;
 	bool is_set;
+	float coords[2];
 };
 
 WaypointTarget g_waypoint_target;
@@ -176,7 +180,7 @@ PLUGIN_API int XPluginStart(
 	g_zulu_target = { 0, 0, false };
 
 	// WAYPOINT MODE
-	g_waypoint_target = { "", 0, false };
+	g_waypoint_target = { "", 0, false, {} };
 	XPLMRegisterKeySniffer(myKeySniffer, 1, NULL); // 1 = before X-Plane gets keys
 
 	// FILE PATHS
@@ -318,6 +322,9 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 					if (is_valid_waypoint(std::string(g_waypoint_target.name), waypoint_file))
 					{
 						g_waypoint_target.is_set = true;
+						get_coordinates(std::string(g_waypoint_target.name), g_waypoint_target.coords, waypoint_file);
+						g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
+						g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 					}
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn_wp))
@@ -562,6 +569,7 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 {
 	float white[] = { 1.0, 1.0, 1.0, 1.0 };
 	float green[] = { 0.0, 1.0, 0.0, 1.0 };
+	float blue[] = { 0.0, 1.0, 1.0, 1.0 };
 	float red[] = { 1.0, 0.0, 0.0, 1.0 };
 	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
 	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
@@ -683,8 +691,23 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	if (g_waypoint_target.is_set)
 	{
 		char info[60];
-		std::snprintf(info, sizeof(info), "Target: %s at %d NM", g_waypoint_target.name, g_waypoint_target.distance_nm);
-		XPLMDrawString(green, l + 15, b + 50, info, NULL, xplmFont_Proportional);
+		char remaining[60];
+		char lat[60];
+		char longi[60];
+
+		if (g_waypoint_target.distance_nm == 0) 
+		{
+			std::snprintf(info, sizeof(info), "Target: %s", g_waypoint_target.name);
+		}
+		else
+		{
+			std::snprintf(info, sizeof(info), "Target: %d NM from %s", g_waypoint_target.distance_nm, g_waypoint_target.name);
+		}
+
+		std::snprintf(remaining, sizeof(remaining), "Distance Left: %d NM", (int) km_to_nm(get_distance_km(g_player_pos, g_waypoint_target.coords)) - g_waypoint_target.distance_nm);
+		
+		XPLMDrawString(green, l + 15, b + 55, info, NULL, xplmFont_Proportional);
+		XPLMDrawString(blue, l + 15, b + char_height, remaining, NULL, xplmFont_Proportional);
 	}
 }
 
@@ -700,6 +723,24 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 			pause_sim(); // pause when time matches
 			XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 		}
+	}
+
+	if (g_waypoint_target.is_set)
+	{
+		// check every time this function runs
+		if (detect_collision(g_waypoint_target.distance_nm, g_player_pos, g_waypoint_target.coords))
+		{
+			g_waypoint_target.distance_nm = 0; // reset distance
+			g_waypoint_target.name[0] = '\0'; // clear name
+			g_waypoint_input[0] = '\0'; // clear input
+			g_waypoint_target.coords[0] = 0.0; // reset coords
+			g_waypoint_target.coords[1] = 0.0; // reset coords
+			g_waypoint_target.is_set = false;
+			pause_sim(); // pause when within distance
+		}
+
+		g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
+		g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 	}
 
 	return 10.0f;  // run again in 10 seconds

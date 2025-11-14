@@ -28,7 +28,7 @@ bool check_time_to_pause(int target_hour, int target_minute)
 }
 
 // WAYPOINT
-void getCoordinates(std::string waypoint, float arr[2])
+void get_coordinates(std::string waypoint, float * arr, std::string path)
 {
     // Create a text string, which is used to output the text file
     std::string text;
@@ -36,7 +36,7 @@ void getCoordinates(std::string waypoint, float arr[2])
     float latitude, longitude;
 
     // Read from the text file
-    std::ifstream MyReadFile("Files/Waypoints.txt");
+    std::ifstream MyReadFile(path);
 
     // Use a while loop together with the getline() function to read the file line by line
     while (std::getline(MyReadFile, text))
@@ -87,10 +87,15 @@ float nm_to_km(int value)
     return value * 1.852;
 }
 
+float km_to_nm(float value)
+{
+	return value / 1.852;
+}
+
 float haversine(float lat1, float lon1, float lat2, float lon2)
 {
     const float R = 6371.0; // Radius of the Earth in kilometers
-    const double PI = 2 * acos(0.0);
+    const double PI = 3.14159265358979323846;
     float dLat = (lat2 - lat1) * PI / 180.0;
     float dLon = (lon2 - lon1) * PI / 180.0;
 
@@ -105,9 +110,15 @@ float haversine(float lat1, float lon1, float lat2, float lon2)
     return distance;
 }
 
-float detect_collision(float diameter, float player_coodrs[2], float waypoint_coords[2])
+float get_distance_km(float player_coords[2], float waypoint_coords[2])
 {
-    float distance = haversine(player_coodrs[0], player_coodrs[1], waypoint_coords[0], waypoint_coords[1]);
+    return haversine(player_coords[0], player_coords[1], waypoint_coords[0], waypoint_coords[1]);
+}
+
+float detect_collision(float diameter, float player_coords[2], float waypoint_coords[2])
+{
+	float distance = get_distance_km(player_coords, waypoint_coords);
+    
     if (distance <= nm_to_km(int(diameter)))
     {
         return true;
@@ -117,12 +128,18 @@ float detect_collision(float diameter, float player_coodrs[2], float waypoint_co
 
 std::string clean_path(char plugin_path[512], char * filename) {
     std::string basePath(plugin_path);
-    size_t pos = basePath.find_last_of("\\/");
+    size_t pos = basePath.find("Resources");
     if (pos != std::string::npos)
-        basePath = basePath.substr(0, pos - 3);  // removes "\64\win.xpl"
+    {
+        // Trim everything after (and including) "\Resources"
+        basePath = basePath.substr(0, pos);
+        // Remove trailing backslash if needed
+        if (!basePath.empty() && (basePath.back() == '\\' || basePath.back() == '/'))
+            basePath.pop_back();
+    }
 
     // Build full path to Waypoints.txt
-    std::string file = basePath + "\\" + filename;
+    std::string file = basePath + "\\Custom Data\\GNS430\\navdata\\" + filename;
 
     return file;
 }
