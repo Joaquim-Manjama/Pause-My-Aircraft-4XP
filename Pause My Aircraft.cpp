@@ -321,7 +321,7 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 				{
 					g_waypoint_target.distance_nm += 5;
 				}
-				else if (coord_in_rect(x, y, g_nm_down_btn))
+				else if (coord_in_rect(x, y, g_nm_down_btn5))
 				{
 					if (g_waypoint_target.distance_nm > 4)
 					{
@@ -587,8 +587,6 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 
 		std::snprintf(info, sizeof(info), "Target set to %02d:%02d Z", g_zulu_target.hours, g_zulu_target.minutes);
 		std::snprintf(remaining, sizeof(remaining), "Time Left: %02d:%02d", curr_hours, curr_minutes);
-
-		
 		
 		XPLMDrawString(green, l + 15, b + 65, info, NULL, xplmFont_Proportional);
 		XPLMDrawString(blue, l + 15, b + char_height, remaining, NULL, xplmFont_Proportional);
@@ -824,4 +822,7 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 
 	return 0; // block everything else
 }
+
+// RESET AFTER PAUSING
+// FIX WAYPOINT NOT PAUSING
 
