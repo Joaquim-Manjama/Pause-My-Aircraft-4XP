@@ -14,3 +14,4 @@ float get_distance_km(float player_coords[2], float waypoint_coords[2]);
 float haversine(float lat1, float lon1, float lat2, float lon2);
 bool detect_collision(int diameter, float player_coords[2], float waypoint_coords[2]);
 std::string clean_path(char plugin_path[512], char * filename);
+char* process_alt(int alt);

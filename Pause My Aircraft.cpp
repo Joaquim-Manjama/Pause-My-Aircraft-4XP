@@ -39,7 +39,7 @@ void		menu_handler(void*, void*);
 void draw_manual_mode(int l, int t, int r, int b, int char_height);
 void draw_zulu_time_mode(int l, int t, int r, int b, int char_height);
 void draw_waypoint_mode(int l, int t, int r, int b, int char_height);
-
+void draw_tod_mode(int l, int t, int r, int b, int char_height);
 
 // Callbacks we will register when we create our window
 void				draw(XPLMWindowID in_window_id, void * in_refcon);
@@ -111,10 +111,25 @@ float g_click_here_box[4];
 bool g_typing_waypoint = false;    // Whether we’re currently typing
 char g_waypoint_input[10] = "";    // Temp buffer for typing
 
+// TOD MODE
+bool g_tod_typing_cruise = false;
+bool g_tod_typing_airport = false;
+
+char g_tod_cruise_input[32] = "";
+char g_tod_airport_input[16] = "";
+
+struct TODTarget {
+	int cruise_alt_ft = 0;
+	char dest_airport[16] = "";
+	bool is_set = false;
+};
+
+TODTarget g_tod_target;
+
 // FILE PATHS
 char plugin_path[512];
 std::string waypoint_file;
-
+std::string airport_file;
 
 static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
 
@@ -185,11 +200,15 @@ PLUGIN_API int XPluginStart(
 
 	// WAYPOINT MODE
 	g_waypoint_target = { "", 0, false, {} };
-	XPLMRegisterKeySniffer(myKeySniffer, 1, NULL); // 1 = before X-Plane gets keys
+	XPLMRegisterKeySniffer(myKeySniffer, 1, NULL);
+
+	// TOD MODE
+	g_tod_target = { 0, "", false };
 
 	// FILE PATHS
 	XPLMGetPluginInfo(XPLMGetMyID(), NULL, plugin_path, NULL, NULL);
 	waypoint_file = clean_path(plugin_path, "Waypoints.txt");
+	airport_file = clean_path(plugin_path, "Airports.txt");
 
 	return g_window != NULL;
 }
@@ -243,6 +262,12 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 	if (current_mode == WAYPOINT)
 	{
 		draw_waypoint_mode(l, t, r, b, char_height);
+	}
+
+	// TOD SCREEN
+	if (current_mode == TOD)
+	{
+		draw_tod_mode(l, t, r, b, char_height);
 	}
 
 	// MANUAL SCREEN
@@ -358,7 +383,17 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			}
 			else if (current_mode == TOD)
 			{
-
+				if (coord_in_rect(x, y, g_click_here_box)) {
+					if (g_tod_typing_airport)
+					{
+						g_tod_typing_airport = false;
+					}
+					else
+					{
+						g_tod_typing_airport = true;
+						g_tod_airport_input[0] = '\0';
+					}
+				}
 			}
 			else if (current_mode == MANUAL)
 			{
@@ -740,6 +775,52 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	}
 }
 
+// TOD MODE
+void draw_tod_mode(int l, int t, int r, int b, int char_height)
+{
+	float white[] = { 1.0, 1.0, 1.0, 1.0 };
+	float green[] = { 0.0, 1.0, 0.0, 1.0 };
+	float blue[] = { 0.0, 1.0, 1.0, 1.0 };
+	float red[] = { 1.0, 0.0, 0.0, 1.0 };
+	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
+
+	int center_x = (l + r) / 2;
+	int mid_y = (t + b) / 2;
+
+	// Title
+	XPLMDrawString(yellow, l + 20, t - 30, (char*)"TOD MODE", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, l + 20, t - 50, (char*)"Set Crusing FL and Destination Airport:", NULL, xplmFont_Proportional);
+
+	// Cruising Altitude input display
+	char alt_str[20];
+	std::snprintf(alt_str, sizeof(alt_str), "FL %d", g_tod_target.cruise_alt_ft);
+	XPLMDrawString(white, center_x - 25, mid_y + 30, alt_str, NULL, xplmFont_Proportional);
+
+	// Destination Airport label
+	XPLMDrawString(white, l + 30, mid_y - 10, (char*)"Destination Airport:", NULL, xplmFont_Proportional);
+
+	g_click_here_box[0] = l + 110 - 5;
+	g_click_here_box[1] = mid_y - 40 - 5;
+	g_click_here_box[2] = g_click_here_box[0] + 70;
+	g_click_here_box[3] = g_click_here_box[1] + 25;
+
+	// Destination Airport text box (typing support)
+	if (g_tod_typing_airport)
+	{
+		char buffer[20];
+		std::snprintf(buffer, sizeof(buffer), "[%s_]", g_tod_airport_input);
+		XPLMDrawString(yellow, l + 110, mid_y - 40, buffer, NULL, xplmFont_Proportional);
+		XPLMDrawString(white, g_click_here_box[0] - 5, g_click_here_box[1] - 12,
+			(char*)"*Press Enter to Confirm*", NULL, xplmFont_Proportional);
+	}
+	else
+	{
+		XPLMDrawString(green, g_click_here_box[0] + 5, g_click_here_box[1] + 5,
+			g_tod_target.dest_airport[0] ? g_tod_target.dest_airport : (char*)"<Click to enter>", NULL, xplmFont_Proportional);
+	}
+}
+
 // CALLBACKS
 float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
 {
@@ -785,43 +866,79 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 
 int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon)
 {
-	if (!g_typing_waypoint)
-		return 1; // let X-Plane handle it normally
 
 	// Only process on key press, ignore repeats and releases
 	if ((inFlags & xplm_DownFlag) == 0)
 		return 0; // block from going to X-Plane but don’t process
 
-	// Handle Enter key
-	if (inChar == '\r' || inChar == '\n')
-	{
-		strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name) - 1);
-		g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
-		g_typing_waypoint = false;
-		return 0; // stop X-Plane from seeing it
-	}
+	if (!g_typing_waypoint && !g_tod_typing_airport)
+		return 1;
 
-	// Handle backspace
-	if (inChar == 8 && strlen(g_waypoint_input) > 0)
+	if (g_typing_waypoint)
 	{
-		g_waypoint_input[strlen(g_waypoint_input) - 1] = '\0';
-		return 0;
-	}
-
-	// Handle printable characters (ignore control chars)
-	if (inChar >= 32 && inChar <= 126)
-	{
-		size_t len = strlen(g_waypoint_input);
-		if (len < sizeof(g_waypoint_input) - 1)
+		// Handle Enter key
+		if (inChar == '\r' || inChar == '\n')
 		{
-			g_waypoint_input[len] = (char) toupper(inChar);
-			g_waypoint_input[len + 1] = '\0';
+			strncpy(g_waypoint_target.name, g_waypoint_input, sizeof(g_waypoint_target.name) - 1);
+			g_waypoint_target.name[sizeof(g_waypoint_target.name) - 1] = '\0';
+			g_typing_waypoint = false;
+			return 0; // stop X-Plane from seeing it
 		}
-		return 0;
+
+		// Handle backspace
+		if (inChar == 8 && strlen(g_waypoint_input) > 0)
+		{
+			g_waypoint_input[strlen(g_waypoint_input) - 1] = '\0';
+			return 0;
+		}
+
+		// Handle printable characters (ignore control chars)
+		if (inChar >= 32 && inChar <= 126)
+		{
+			size_t len = strlen(g_waypoint_input);
+			if (len < sizeof(g_waypoint_input) - 1)
+			{
+				g_waypoint_input[len] = (char)toupper(inChar);
+				g_waypoint_input[len + 1] = '\0';
+			}
+			return 0;
+		}
+
+		// Only process on key press, ignore repeats and releases
+		if ((inFlags & xplm_DownFlag) == 0)
+			return 0; // block from going to X-Plane but don’t process
 	}
 
-	return 0; // block everything else
+	if (g_tod_typing_airport)
+	{
+		// Handle Enter key
+		if (inChar == '\r' || inChar == '\n')
+		{
+			strncpy(g_tod_target.dest_airport, g_tod_airport_input, sizeof(g_tod_target.dest_airport) - 1);
+			g_tod_target.dest_airport[sizeof(g_tod_target.dest_airport) - 1] = '\0';
+			g_tod_typing_airport = false;
+			return 0; // stop X-Plane from seeing it
+		}
+
+		// Handle backspace
+		if (inChar == 8 && strlen(g_tod_airport_input) > 0)
+		{
+			g_tod_airport_input[strlen(g_tod_airport_input) - 1] = '\0';
+			return 0;
+		}
+
+		// Handle printable characters (ignore control chars)
+		if (inChar >= 32 && inChar <= 126)
+		{
+			size_t len = strlen(g_tod_airport_input);
+			if (len < sizeof(g_tod_airport_input) - 1)
+			{
+				g_tod_airport_input[len] = (char)toupper(inChar);
+				g_tod_airport_input[len + 1] = '\0';
+			}
+			return 0;
+		}
+	}
+
+	return 1; 
 }
-
-// RESET AFTER PAUSING ZULU TIME
-
