@@ -743,6 +743,7 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 // CALLBACKS
 float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void* refcon)
 {
+
 	if (g_zulu_target.is_set)
 	{
 		// check every time this function runs
@@ -755,16 +756,18 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 
 	if (g_waypoint_target.is_set)
 	{
+		g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
+		g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 		// check every time this function runs
 		if (detect_collision(g_waypoint_target.distance_nm, g_player_pos, g_waypoint_target.coords))
 		{
+			pause_sim(); // pause when within distance
 			g_waypoint_target.distance_nm = 0; // reset distance
 			g_waypoint_target.name[0] = '\0'; // clear name
 			g_waypoint_input[0] = '\0'; // clear input
 			g_waypoint_target.coords[0] = 0.0; // reset coords
 			g_waypoint_target.coords[1] = 0.0; // reset coords
 			g_waypoint_target.is_set = false;
-			pause_sim(); // pause when within distance
 
 		}
 
@@ -775,9 +778,6 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 				XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 			}
 		}
-
-		g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
-		g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 	}
 
 	return 10.0f;  // run again in 10 seconds
@@ -823,6 +823,5 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 	return 0; // block everything else
 }
 
-// RESET AFTER PAUSING
-// FIX WAYPOINT NOT PAUSING
+// RESET AFTER PAUSING ZULU TIME
 
