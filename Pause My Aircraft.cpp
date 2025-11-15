@@ -53,6 +53,9 @@ void				dummy_key_handler(XPLMWindowID in_window_id, char key, XPLMKeyFlags flag
 float flight_loop_callback(float, float, int, void*);
 int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon);
 
+// CALLBACK VARIABLES
+bool g_flight_loop_active;
+
 // PLUGIN MODE
 typedef enum {
 	ZULU_TIME = 0,
@@ -175,6 +178,7 @@ PLUGIN_API int XPluginStart(
 
 	// PLUGIN MODE
 	current_mode = MANUAL;
+	g_flight_loop_active = false;
 
 	// ZULU TIME 
 	g_zulu_target = { 0, 0, false };
@@ -274,12 +278,19 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 					g_zulu_target.minutes = (g_zulu_target.minutes + 59) % 60;
 				}
 				else if (coord_in_rect(x, y, g_confirm_btn)) {
+					if (!g_flight_loop_active) 
+					{
+						XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
+						g_flight_loop_active = true;
+					}
+					
 					g_zulu_target.is_set = true;
-					XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
+					g_flight_loop_active = true;
+					
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn)) {
 					g_zulu_target.is_set = false;
-					XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+					g_flight_loop_active = false;
 				}
 			}
 			else if (current_mode == WAYPOINT)
@@ -325,11 +336,18 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 						get_coordinates(std::string(g_waypoint_target.name), g_waypoint_target.coords, waypoint_file);
 						g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 						g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
+
+						if (!g_flight_loop_active)
+						{
+							XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
+							g_flight_loop_active = true;
+						}
 					}
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn_wp))
 				{
 					g_waypoint_target.is_set = false;
+					g_flight_loop_active = false;
 				}
 				else
 				{
@@ -459,6 +477,7 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 {
 	float white[] = { 1.0f, 1.0f, 1.0f };
 	float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+	float blue[] = { 0.0f, 1.0f, 1.0f, 1.0f };
 	float red[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
 	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
@@ -559,8 +578,20 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	// If confirmed, show the target info
 	if (g_zulu_target.is_set) {
 		char info[50];
+		char remaining[50];
+		int curr_hours;
+		int curr_minutes;
+		get_current_utc_time(curr_hours, curr_minutes);
+		curr_hours = (g_zulu_target.hours - curr_hours + 24) % 24;
+		curr_minutes = (g_zulu_target.minutes - curr_minutes + 60) % 60;
+
 		std::snprintf(info, sizeof(info), "Target set to %02d:%02d Z", g_zulu_target.hours, g_zulu_target.minutes);
+		std::snprintf(remaining, sizeof(remaining), "Time Left: %02d:%02d", curr_hours, curr_minutes);
+
+		
+		
 		XPLMDrawString(green, l + 15, b + 65, info, NULL, xplmFont_Proportional);
+		XPLMDrawString(blue, l + 15, b + char_height, remaining, NULL, xplmFont_Proportional);
 	}
 }
 
@@ -721,7 +752,6 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 		{
 			g_zulu_target.is_set = false;
 			pause_sim(); // pause when time matches
-			XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
 		}
 	}
 
@@ -737,6 +767,15 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 			g_waypoint_target.coords[1] = 0.0; // reset coords
 			g_waypoint_target.is_set = false;
 			pause_sim(); // pause when within distance
+
+		}
+
+		if (!g_zulu_target.is_set && !g_waypoint_target.is_set)
+		{
+			if (g_flight_loop_active)
+			{
+				XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+			}
 		}
 
 		g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));

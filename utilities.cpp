@@ -4,7 +4,7 @@
 #include <cmath>
 
 // ZULU TIME
-bool check_time_to_pause(int target_hour, int target_minute)
+void get_current_utc_time(int& hour, int& minute)
 {
     // Get current system time
     auto now = std::chrono::system_clock::now();
@@ -21,8 +21,14 @@ bool check_time_to_pause(int target_hour, int target_minute)
     gmtime_r(&now_c, &utc_tm);
 #endif
 
-    int hour = utc_tm.tm_hour;
-    int minute = utc_tm.tm_min;
+    hour = utc_tm.tm_hour;
+    minute = utc_tm.tm_min;
+}
+
+bool check_time_to_pause(int target_hour, int target_minute)
+{
+    int hour, minute;
+	get_current_utc_time(hour, minute);
 
     return (target_hour == hour) && (target_minute == minute);
 }
@@ -115,11 +121,11 @@ float get_distance_km(float player_coords[2], float waypoint_coords[2])
     return haversine(player_coords[0], player_coords[1], waypoint_coords[0], waypoint_coords[1]);
 }
 
-float detect_collision(float diameter, float player_coords[2], float waypoint_coords[2])
+bool detect_collision(int diameter, float player_coords[2], float waypoint_coords[2])
 {
-	float distance = get_distance_km(player_coords, waypoint_coords);
+	float distance = nm_to_km(get_distance_km(player_coords, waypoint_coords));
     
-    if (distance <= nm_to_km(int(diameter)))
+    if (distance <= diameter)
     {
         return true;
     }
