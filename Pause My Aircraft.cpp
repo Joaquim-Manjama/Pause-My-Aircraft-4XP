@@ -36,7 +36,7 @@ XPLMMenuID	g_menu_id; // The menu container we'll append all our menu items to
 void		menu_handler(void*, void*);
 
 // WINDOWS
-void draw_manual_mode(int l, int t, int r, int b, int char_height);
+void draw_about_mode(int l, int t, int r, int b, int char_height);
 void draw_zulu_time_mode(int l, int t, int r, int b, int char_height);
 void draw_waypoint_mode(int l, int t, int r, int b, int char_height);
 void draw_tod_mode(int l, int t, int r, int b, int char_height);
@@ -271,7 +271,7 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 	// MANUAL SCREEN
 	if (current_mode == ABOUT)
 	{
-		draw_manual_mode(l, t, r, b, char_height);
+		draw_about_mode(l, t, r, b, char_height);
 	}
 }
 
@@ -393,13 +393,6 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 					}
 				}
 			}
-			else if (current_mode == MANUAL)
-			{
-				if (coord_in_rect(x, y, g_pause_button_lbrt))
-				{
-					pause_sim();
-				}
-			}
 		}
 	}
 
@@ -446,8 +439,8 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 
 // DRAWING
 
-// MANUAL MODE **** TO REMOVE ****
-void draw_manual_mode(int l, int t, int r, int b, int char_height)
+// ABOUT MODE
+void draw_about_mode(int l, int t, int r, int b, int char_height)
 {
 	float white[] = { 1.0f, 1.0f, 1.0f };
 	float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
@@ -886,13 +879,14 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 			g_waypoint_target.is_set = false;
 
 		}
+	}
 
-		if (!g_zulu_target.is_set && !g_waypoint_target.is_set)
+	if (!g_zulu_target.is_set && !g_waypoint_target.is_set)
+	{
+		if (g_flight_loop_active)
 		{
-			if (g_flight_loop_active)
-			{
-				XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
-			}
+			XPLMUnregisterFlightLoopCallback(flight_loop_callback, NULL);
+			g_flight_loop_active = false;
 		}
 	}
 
