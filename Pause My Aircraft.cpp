@@ -61,8 +61,7 @@ typedef enum {
 	ZULU_TIME = 0,
 	WAYPOINT = 1,
 	TOD = 2,
-	MANUAL = 3,
-	ABOUT = 4
+	ABOUT = 3
 } PauseMode;
 static PauseMode current_mode;
 
@@ -152,8 +151,7 @@ PLUGIN_API int XPluginStart(
 	XPLMAppendMenuItem(g_menu_id, "Zulu Time", (void*)"Menu Item 1", 1);
 	XPLMAppendMenuItem(g_menu_id, "Waypoint", (void*)"Menu Item 2", 1);
 	XPLMAppendMenuItem(g_menu_id, "TOD", (void*)"Menu Item 3", 1);
-	XPLMAppendMenuItem(g_menu_id, "Manual", (void*)"Menu Item 4", 1);
-	XPLMAppendMenuItem(g_menu_id, "About", (void*)"Menu Item 5", 1);
+	XPLMAppendMenuItem(g_menu_id, "About", (void*)"Menu Item 4", 1);
 
 	XPLMCreateWindow_t params;
 	params.structSize = sizeof(params);
@@ -192,7 +190,7 @@ PLUGIN_API int XPluginStart(
 	XPLMSetWindowIsVisible(g_window, 0);
 
 	// PLUGIN MODE
-	current_mode = MANUAL;
+	current_mode = ABOUT;
 	g_flight_loop_active = false;
 
 	// ZULU TIME 
@@ -271,7 +269,7 @@ void	draw(XPLMWindowID in_window_id, void * in_refcon)
 	}
 
 	// MANUAL SCREEN
-	if (current_mode == MANUAL)
+	if (current_mode == ABOUT)
 	{
 		draw_manual_mode(l, t, r, b, char_height);
 	}
@@ -448,7 +446,7 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 
 // DRAWING
 
-// MANUAL MODE
+// MANUAL MODE **** TO REMOVE ****
 void draw_manual_mode(int l, int t, int r, int b, int char_height)
 {
 	float white[] = { 1.0f, 1.0f, 1.0f };
