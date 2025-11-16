@@ -100,10 +100,10 @@ WaypointTarget g_waypoint_target;
 // Button coordinate arrays
 float g_nm_up_btn[4];
 float g_nm_down_btn[4];
+float g_nm_up_btn2[4];
+float g_nm_down_btn2[4];
 float g_nm_up_btn5[4];
 float g_nm_down_btn5[4];
-float g_confirm_btn_wp[4];
-float g_cancel_btn_wp[4];
 float g_click_here_box[4];
 
 // Text input
@@ -130,10 +130,25 @@ char plugin_path[512];
 std::string waypoint_file;
 std::string airport_file;
 
-static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
-
 // PLUGIN START FUNCTION
 void pause_sim();
+
+// DRAW BUTTON
+void draw_button(float points[4], float out_colour[4], float in_colour[4], char* label, int xoffset, int yoffset);
+
+// CHECK COLLISION WITH BUTTON
+static int	coord_in_rect(float x, float y, float* bounds_lbrt) { return ((x >= bounds_lbrt[0]) && (x < bounds_lbrt[2]) && (y < bounds_lbrt[3]) && (y >= bounds_lbrt[1])); }
+
+// COLOURS
+float black[] = { 0.0, 0.0, 0.0, 0.0 };
+float white[] = { 1.0, 1.0, 1.0, 1.0 };
+float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+float darkgreen[] = { 0.0f, 0.4f, 0.0f, 1.0f };
+float darkred[] = { 0.4f, 0.0f, 0.0f, 1.0f };
+float blue[] = { 0.0, 1.0, 1.0, 1.0 };
+float red[] = { 1.0, 0.0, 0.0, 1.0 };
+float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
 
 // XPLUGIN_START
 PLUGIN_API int XPluginStart(
@@ -351,7 +366,7 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 						g_waypoint_target.distance_nm -= 5;
 					}
 				}
-				else if (coord_in_rect(x, y, g_confirm_btn_wp))
+				else if (coord_in_rect(x, y, g_confirm_btn))
 				{
 					if (is_valid_waypoint(std::string(g_waypoint_target.name), waypoint_file))
 					{
@@ -367,7 +382,7 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 						}
 					}
 				}
-				else if (coord_in_rect(x, y, g_cancel_btn_wp))
+				else if (coord_in_rect(x, y, g_cancel_btn))
 				{
 					g_waypoint_target.is_set = false;
 					g_flight_loop_active = false;
@@ -429,10 +444,6 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 	}
 	else if (!strcmp((const char*)in_item_ref, "Menu Item 4"))
 	{
-		current_mode = MANUAL;
-	}
-	else if (!strcmp((const char*)in_item_ref, "Menu Item 5"))
-	{
 		current_mode = ABOUT;
 	}
 }
@@ -442,72 +453,11 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 // ABOUT MODE
 void draw_about_mode(int l, int t, int r, int b, int char_height)
 {
-	float white[] = { 1.0f, 1.0f, 1.0f };
-	float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-	float darkGreen[] = { 0.0f, 0.4f, 0.0f, 1.0f };
-	float shadow[] = { 0.0f, 0.0f, 0.0f, 0.4f };
-
-	// Measure text width for centering
-	float pause_string_length = XPLMMeasureString(xplmFont_Proportional, g_pause_label, strlen(g_pause_label));
-
-	// Define button bounds
-	g_pause_button_lbrt[0] = l + ((r - l) - pause_string_length - 20) / 2; // LEFT (20px padding)
-	g_pause_button_lbrt[3] = t - (((t - b) - char_height) / 2);            // TOP
-	g_pause_button_lbrt[2] = g_pause_button_lbrt[0] + pause_string_length + 20; // RIGHT
-	g_pause_button_lbrt[1] = g_pause_button_lbrt[3] - (1.8f * char_height);     // BOTTOM
-
-	// --- Draw subtle shadow behind the button ---
-	glColor4fv(shadow);
-	glBegin(GL_QUADS);
-	{
-		glVertex2i(g_pause_button_lbrt[0] + 2, g_pause_button_lbrt[3] - 2);
-		glVertex2i(g_pause_button_lbrt[2] + 2, g_pause_button_lbrt[3] - 2);
-		glVertex2i(g_pause_button_lbrt[2] + 2, g_pause_button_lbrt[1] - 2);
-		glVertex2i(g_pause_button_lbrt[0] + 2, g_pause_button_lbrt[1] - 2);
-	}
-	glEnd();
-
-	// --- Draw filled button background ---
-	glColor4f(0.0f, 0.3f, 0.0f, 0.85f); // semi-transparent dark green fill
-	glBegin(GL_QUADS);
-	{
-		glVertex2i(g_pause_button_lbrt[0], g_pause_button_lbrt[3]);
-		glVertex2i(g_pause_button_lbrt[2], g_pause_button_lbrt[3]);
-		glVertex2i(g_pause_button_lbrt[2], g_pause_button_lbrt[1]);
-		glVertex2i(g_pause_button_lbrt[0], g_pause_button_lbrt[1]);
-	}
-	glEnd();
-
-	// --- Draw bright outline for clarity ---
-	glLineWidth(2.0f);
-	glColor4fv(green);
-	glBegin(GL_LINE_LOOP);
-	{
-		glVertex2i(g_pause_button_lbrt[0], g_pause_button_lbrt[3]);
-		glVertex2i(g_pause_button_lbrt[2], g_pause_button_lbrt[3]);
-		glVertex2i(g_pause_button_lbrt[2], g_pause_button_lbrt[1]);
-		glVertex2i(g_pause_button_lbrt[0], g_pause_button_lbrt[1]);
-	}
-	glEnd();
-	glLineWidth(1.0f);
-
-	// --- Draw the pause label centered vertically and horizontally ---
-	int text_x = g_pause_button_lbrt[0] + ((g_pause_button_lbrt[2] - g_pause_button_lbrt[0]) - pause_string_length) / 2;
-	int text_y = g_pause_button_lbrt[1] + (char_height * 0.5f);
-
-	XPLMDrawString(white, text_x, text_y, (char*)g_pause_label, NULL, xplmFont_Proportional);
 }
 
 // ZULU TIME MODE
 void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 {
-	float white[] = { 1.0f, 1.0f, 1.0f };
-	float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-	float blue[] = { 0.0f, 1.0f, 1.0f, 1.0f };
-	float red[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
-	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
-
 	// Title
 	XPLMDrawString(yellow, l + 20, t - 30, (char*)"ZULU TIME MODE", NULL, xplmFont_Proportional);
 
@@ -525,49 +475,25 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
 
 	// Draw hour up/down arrows
-	g_hour_up_btn[0] = center_x - 60; g_hour_up_btn[1] = mid_y + 25;
-	g_hour_up_btn[2] = center_x - 45; g_hour_up_btn[3] = mid_y + 40;
+	g_hour_up_btn[0] = center_x - 20; g_hour_up_btn[1] = mid_y + 25;
+	g_hour_up_btn[2] = center_x - 5; g_hour_up_btn[3] = mid_y + 40;
 
-	g_hour_down_btn[0] = center_x - 60; g_hour_down_btn[1] = mid_y - 40;
-	g_hour_down_btn[2] = center_x - 45; g_hour_down_btn[3] = mid_y - 25;
+	g_hour_down_btn[0] = center_x - 20; g_hour_down_btn[1] = mid_y - 40;
+	g_hour_down_btn[2] = center_x - 5; g_hour_down_btn[3] = mid_y - 25;
+
+	draw_button(g_hour_up_btn, gray, darkgreen, "+", 2, 5);
+	draw_button(g_hour_down_btn, gray, darkred, "-", 6, 5);
+
 
 	// Draw minute up/down arrows
-	g_min_up_btn[0] = center_x + 45; g_min_up_btn[1] = mid_y + 25;
-	g_min_up_btn[2] = center_x + 60; g_min_up_btn[3] = mid_y + 40;
+	g_min_up_btn[0] = center_x + 5; g_min_up_btn[1] = mid_y + 25;
+	g_min_up_btn[2] = center_x + 20; g_min_up_btn[3] = mid_y + 40;
 
-	g_min_down_btn[0] = center_x + 45; g_min_down_btn[1] = mid_y - 40;
-	g_min_down_btn[2] = center_x + 60; g_min_down_btn[3] = mid_y - 25;
+	g_min_down_btn[0] = center_x + 5; g_min_down_btn[1] = mid_y - 40;
+	g_min_down_btn[2] = center_x + 20; g_min_down_btn[3] = mid_y - 25;
 
-	glColor4fv(green);
-	glDisable(GL_CULL_FACE);
-	glBegin(GL_TRIANGLES);
-	{
-		// Up triangle (hour)
-		glVertex2i((g_hour_up_btn[0] + g_hour_up_btn[2]) / 2, g_hour_up_btn[3]);
-		glVertex2i(g_hour_up_btn[0], g_hour_up_btn[1]);
-		glVertex2i(g_hour_up_btn[2], g_hour_up_btn[1]);
-
-		// Up triangle (minute)
-		glVertex2i((g_min_up_btn[0] + g_min_up_btn[2]) / 2, g_min_up_btn[3]);
-		glVertex2i(g_min_up_btn[0], g_min_up_btn[1]);
-		glVertex2i(g_min_up_btn[2], g_min_up_btn[1]);
-	}
-	glEnd();
-
-	glColor4fv(red);
-	glBegin(GL_TRIANGLES);
-	{
-		// Down triangle (hour)
-		glVertex2i((g_hour_down_btn[0] + g_hour_down_btn[2]) / 2, g_hour_down_btn[1]);
-		glVertex2i(g_hour_down_btn[0], g_hour_down_btn[3]);
-		glVertex2i(g_hour_down_btn[2], g_hour_down_btn[3]);
-
-		// Down triangle (minute)
-		glVertex2i((g_min_down_btn[0] + g_min_down_btn[2]) / 2, g_min_down_btn[1]);
-		glVertex2i(g_min_down_btn[0], g_min_down_btn[3]);
-		glVertex2i(g_min_down_btn[2], g_min_down_btn[3]);
-	}
-	glEnd();
+	draw_button(g_min_up_btn, gray, darkgreen, "+", 2, 5);
+	draw_button(g_min_down_btn, gray, darkred, "-", 6, 5);
 
 	// Confirm and Cancel buttons
 	const char* confirm_label = "CONFIRM";
@@ -579,27 +505,12 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	g_confirm_btn[0] = center_x - confirm_w - 20; g_confirm_btn[1] = b + 20;
 	g_confirm_btn[2] = g_confirm_btn[0] + confirm_w + 20; g_confirm_btn[3] = g_confirm_btn[1] + 25;
 
+	draw_button(g_confirm_btn, gray, black, (char*)confirm_label, 10, 7);
+
 	g_cancel_btn[0] = center_x + 20; g_cancel_btn[1] = b + 20;
 	g_cancel_btn[2] = g_cancel_btn[0] + cancel_w + 20; g_cancel_btn[3] = g_cancel_btn[1] + 25;
 
-	// Draw button boxes
-	glColor4fv(gray);
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_confirm_btn[0], g_confirm_btn[1]);
-	glVertex2i(g_confirm_btn[2], g_confirm_btn[1]);
-	glVertex2i(g_confirm_btn[2], g_confirm_btn[3]);
-	glVertex2i(g_confirm_btn[0], g_confirm_btn[3]);
-	glEnd();
-
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_cancel_btn[0], g_cancel_btn[1]);
-	glVertex2i(g_cancel_btn[2], g_cancel_btn[1]);
-	glVertex2i(g_cancel_btn[2], g_cancel_btn[3]);
-	glVertex2i(g_cancel_btn[0], g_cancel_btn[3]);
-	glEnd();
-
-	XPLMDrawString(white, g_confirm_btn[0] + 10, g_confirm_btn[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_cancel_btn[0] + 10, g_cancel_btn[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
+	draw_button(g_cancel_btn, gray, black, (char*)cancel_label, 10, 7);
 
 	// If confirmed, show the target info
 	if (g_zulu_target.is_set) {
@@ -622,13 +533,6 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 // WAYPOINT MODE
 void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 {
-	float white[] = { 1.0, 1.0, 1.0, 1.0 };
-	float green[] = { 0.0, 1.0, 0.0, 1.0 };
-	float blue[] = { 0.0, 1.0, 1.0, 1.0 };
-	float red[] = { 1.0, 0.0, 0.0, 1.0 };
-	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
-	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
-
 	int center_x = (l + r) / 2;
 	int mid_y = (t + b) / 2;
 
@@ -668,42 +572,23 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 25;
 	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 40;
 
+	draw_button(g_nm_up_btn, gray, darkgreen, "+", 2, 5);
+
 	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 40;
 	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y - 25;
+
+	draw_button(g_nm_up_btn5, gray, darkgreen, "+", 2, 5);
 
 	g_nm_up_btn5[0] = center_x + 75; g_nm_up_btn5[1] = mid_y + 25;
 	g_nm_up_btn5[2] = center_x + 90; g_nm_up_btn5[3] = mid_y + 40;
 
+	draw_button(g_nm_down_btn, gray, darkred, "-", 6, 5);
+
 	g_nm_down_btn5[0] = center_x + 75; g_nm_down_btn5[1] = mid_y - 40;
 	g_nm_down_btn5[2] = center_x + 90; g_nm_down_btn5[3] = mid_y - 25;
 
-	// Draw triangles
-	glColor4fv(green);
-	glDisable(GL_CULL_FACE);
-	glBegin(GL_TRIANGLES);
-	{
-		glVertex2i((g_nm_up_btn[0] + g_nm_up_btn[2]) / 2, g_nm_up_btn[3]);
-		glVertex2i(g_nm_up_btn[0], g_nm_up_btn[1]);
-		glVertex2i(g_nm_up_btn[2], g_nm_up_btn[1]);
+	draw_button(g_nm_down_btn5, gray, darkred, "-", 6, 5);
 
-		glVertex2i((g_nm_up_btn5[0] + g_nm_up_btn5[2]) / 2, g_nm_up_btn5[3]);
-		glVertex2i(g_nm_up_btn5[0], g_nm_up_btn5[1]);
-		glVertex2i(g_nm_up_btn5[2], g_nm_up_btn5[1]);
-	}
-	glEnd();
-
-	glColor4fv(red);
-	glBegin(GL_TRIANGLES);
-	{
-		glVertex2i((g_nm_down_btn[0] + g_nm_down_btn[2]) / 2, g_nm_down_btn[1]);
-		glVertex2i(g_nm_down_btn[0], g_nm_down_btn[3]);
-		glVertex2i(g_nm_down_btn[2], g_nm_down_btn[3]);
-
-		glVertex2i((g_nm_down_btn5[0] + g_nm_down_btn5[2]) / 2, g_nm_down_btn5[1]);
-		glVertex2i(g_nm_down_btn5[0], g_nm_down_btn5[3]);
-		glVertex2i(g_nm_down_btn5[2], g_nm_down_btn5[3]);
-	}
-	glEnd();
 
 	// Confirm & Cancel buttons
 	const char* confirm_label = "CONFIRM";
@@ -712,43 +597,21 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	float confirm_w = XPLMMeasureString(xplmFont_Proportional, confirm_label, strlen(confirm_label));
 	float cancel_w = XPLMMeasureString(xplmFont_Proportional, cancel_label, strlen(cancel_label));
 
-	g_confirm_btn_wp[0] = center_x - confirm_w - 20; g_confirm_btn_wp[1] = b + 20;
-	g_confirm_btn_wp[2] = g_confirm_btn_wp[0] + confirm_w + 20; g_confirm_btn_wp[3] = g_confirm_btn_wp[1] + 25;
+	g_confirm_btn[0] = center_x - confirm_w - 20; g_confirm_btn[1] = b + 20;
+	g_confirm_btn[2] = g_confirm_btn[0] + confirm_w + 20; g_confirm_btn[3] = g_confirm_btn[1] + 25;
 
-	g_cancel_btn_wp[0] = center_x + 20; g_cancel_btn_wp[1] = b + 20;
-	g_cancel_btn_wp[2] = g_cancel_btn_wp[0] + cancel_w + 20; g_cancel_btn_wp[3] = g_cancel_btn_wp[1] + 25;
+	draw_button(g_confirm_btn, gray, black, (char*)confirm_label, 10, 7);
 
-	// Draw button boxes
-	glColor4fv(gray);
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[1]);
-	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[1]);
-	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[3]);
-	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[3]);
-	glEnd();
+	g_cancel_btn[0] = center_x + 20; g_cancel_btn[1] = b + 20;
+	g_cancel_btn[2] = g_cancel_btn[0] + cancel_w + 20; g_cancel_btn[3] = g_cancel_btn[1] + 25;
 
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[1]);
-	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[1]);
-	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[3]);
-	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[3]);
-	glEnd();
-
-	XPLMDrawString(white, g_confirm_btn_wp[0] + 10, g_confirm_btn_wp[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_cancel_btn_wp[0] + 10, g_cancel_btn_wp[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
-
-	XPLMDrawString(white, g_nm_up_btn[0], g_nm_up_btn[3] + 7, "+1", NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_nm_up_btn5[0], g_nm_up_btn5[3] + 7, "+5", NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_nm_down_btn[0], g_nm_down_btn[1] - 7 - char_height, "-1", NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_nm_down_btn5[0], g_nm_down_btn5[1] - 7 - char_height, "-5", NULL, xplmFont_Proportional);
+	draw_button(g_cancel_btn, gray, black, (char*)cancel_label, 10, 7);
 
 	// If confirmed, show target info
 	if (g_waypoint_target.is_set)
 	{
 		char info[60];
 		char remaining[60];
-		char lat[60];
-		char longi[60];
 
 		if (g_waypoint_target.distance_nm == 0) 
 		{
@@ -769,13 +632,6 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 // TOD MODE
 void draw_tod_mode(int l, int t, int r, int b, int char_height)
 {
-	float white[] = { 1.0, 1.0, 1.0, 1.0 };
-	float green[] = { 0.0, 1.0, 0.0, 1.0 };
-	float blue[] = { 0.0, 1.0, 1.0, 1.0 };
-	float red[] = { 1.0, 0.0, 0.0, 1.0 };
-	float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
-	float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
-
 	int center_x = (l + r) / 2;
 	int mid_y = (t + b) / 2;
 
@@ -792,6 +648,38 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 
 	XPLMDrawString(white, l + 30, mid_y + 45, (char*)"Cruising Altitude (FL):", NULL, xplmFont_Proportional);
 	XPLMDrawString(white, center_x - 10, mid_y + 15, alt_str, NULL, xplmFont_Proportional);
+
+	// FL BUTTONS
+
+	// PLUS 100
+	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 25;
+	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 40;
+	draw_button(g_nm_up_btn, gray, darkgreen, "+", 2, 5);
+
+	// PLUS 10
+	g_nm_up_btn2[0] = center_x + 70; g_nm_up_btn2[1] = mid_y + 25;
+	g_nm_up_btn2[2] = center_x + 85; g_nm_up_btn2[3] = mid_y + 40;
+	draw_button(g_nm_up_btn2, gray, darkgreen, "+", 2, 5);
+
+	// PLUS 1
+	g_nm_up_btn5[0] = center_x + 95; g_nm_up_btn5[1] = mid_y + 25;
+	g_nm_up_btn5[2] = center_x + 110; g_nm_up_btn5[3] = mid_y + 40;
+	draw_button(g_nm_up_btn5, gray, darkgreen, "+", 2, 5);
+
+	// MINUS 100
+	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 20;
+	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y - 5;
+	draw_button(g_nm_down_btn, gray, darkred, "-", 6, 5);
+
+	// MINUS 10
+	g_nm_down_btn2[0] = center_x + 70; g_nm_down_btn2[1] = mid_y - 20;
+	g_nm_down_btn2[2] = center_x + 85; g_nm_down_btn2[3] = mid_y - 5;
+	draw_button(g_nm_down_btn2, gray, darkred, "-", 6, 5);
+
+	// MINUS 1
+	g_nm_down_btn5[0] = center_x + 95; g_nm_down_btn5[1] = mid_y - 20;
+	g_nm_down_btn5[2] = center_x + 110; g_nm_down_btn5[3] = mid_y - 5;
+	draw_button(g_nm_down_btn5, gray, darkred, "-", 6, 5);
 
 	// Destination Airport label
 	XPLMDrawString(white, l + 30, mid_y - 10, (char*)"Destination Airport:", NULL, xplmFont_Proportional);
@@ -823,30 +711,15 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 	float confirm_w = XPLMMeasureString(xplmFont_Proportional, confirm_label, strlen(confirm_label));
 	float cancel_w = XPLMMeasureString(xplmFont_Proportional, cancel_label, strlen(cancel_label));
 
-	g_confirm_btn_wp[0] = center_x - confirm_w - 20; g_confirm_btn_wp[1] = b + 20;
-	g_confirm_btn_wp[2] = g_confirm_btn_wp[0] + confirm_w + 20; g_confirm_btn_wp[3] = g_confirm_btn_wp[1] + 25;
+	g_confirm_btn[0] = center_x - confirm_w - 20; g_confirm_btn[1] = b + 20;
+	g_confirm_btn[2] = g_confirm_btn[0] + confirm_w + 20; g_confirm_btn[3] = g_confirm_btn[1] + 25;
 
-	g_cancel_btn_wp[0] = center_x + 20; g_cancel_btn_wp[1] = b + 20;
-	g_cancel_btn_wp[2] = g_cancel_btn_wp[0] + cancel_w + 20; g_cancel_btn_wp[3] = g_cancel_btn_wp[1] + 25;
+	draw_button(g_confirm_btn, gray, black, (char*)confirm_label, 10, 7);
 
-	// Draw button boxes
-	glColor4fv(gray);
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[1]);
-	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[1]);
-	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[3]);
-	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[3]);
-	glEnd();
+	g_cancel_btn[0] = center_x + 20; g_cancel_btn[1] = b + 20;
+	g_cancel_btn[2] = g_cancel_btn[0] + cancel_w + 20; g_cancel_btn[3] = g_cancel_btn[1] + 25;
 
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[1]);
-	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[1]);
-	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[3]);
-	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[3]);
-	glEnd();
-
-	XPLMDrawString(white, g_confirm_btn_wp[0] + 10, g_confirm_btn_wp[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
-	XPLMDrawString(white, g_cancel_btn_wp[0] + 10, g_cancel_btn_wp[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
+	draw_button(g_cancel_btn, gray, black, (char*)cancel_label, 10, 7);
 }
 
 // CALLBACKS
@@ -970,4 +843,29 @@ int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inR
 	}
 
 	return 1; 
+}
+
+void draw_button(float points[4], float out_colour[4], float in_colour[4], char* label, int xoffset, int yoffset)
+{
+	float white[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	glColor4fv(in_colour);
+	glBegin(GL_QUADS);
+	{
+		glVertex2i(points[0], points[3]);
+		glVertex2i(points[2], points[3]);
+		glVertex2i(points[2], points[1]);
+		glVertex2i(points[0], points[1]);
+	}
+	glEnd();
+
+	glColor4fv(out_colour);
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(points[0], points[3]);
+	glVertex2i(points[2], points[3]);
+	glVertex2i(points[2], points[1]);
+	glVertex2i(points[0], points[1]);
+	glEnd();
+
+	XPLMDrawString(white, points[0] + xoffset, points[1] + yoffset, (char*)label, NULL, xplmFont_Proportional);
 }
