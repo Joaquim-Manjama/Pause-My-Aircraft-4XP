@@ -794,8 +794,13 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 
 	// Cruising Altitude input display
 	char alt_str[20];
-	std::snprintf(alt_str, sizeof(alt_str), "FL %d", g_tod_target.cruise_alt_ft);
-	XPLMDrawString(white, center_x - 25, mid_y + 30, alt_str, NULL, xplmFont_Proportional);
+	char alt_buffer[8];
+	format_alt(g_tod_target.cruise_alt_ft, alt_buffer);
+
+	std::snprintf(alt_str, sizeof(alt_str), "FL %s", alt_buffer);
+
+	XPLMDrawString(white, l + 30, mid_y + 45, (char*)"Cruising Altitude (FL):", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, center_x - 10, mid_y + 15, alt_str, NULL, xplmFont_Proportional);
 
 	// Destination Airport label
 	XPLMDrawString(white, l + 30, mid_y - 10, (char*)"Destination Airport:", NULL, xplmFont_Proportional);
@@ -819,6 +824,38 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 		XPLMDrawString(green, g_click_here_box[0] + 5, g_click_here_box[1] + 5,
 			g_tod_target.dest_airport[0] ? g_tod_target.dest_airport : (char*)"<Click to enter>", NULL, xplmFont_Proportional);
 	}
+
+	// Confirm & Cancel buttons
+	const char* confirm_label = "CONFIRM";
+	const char* cancel_label = "CANCEL";
+
+	float confirm_w = XPLMMeasureString(xplmFont_Proportional, confirm_label, strlen(confirm_label));
+	float cancel_w = XPLMMeasureString(xplmFont_Proportional, cancel_label, strlen(cancel_label));
+
+	g_confirm_btn_wp[0] = center_x - confirm_w - 20; g_confirm_btn_wp[1] = b + 20;
+	g_confirm_btn_wp[2] = g_confirm_btn_wp[0] + confirm_w + 20; g_confirm_btn_wp[3] = g_confirm_btn_wp[1] + 25;
+
+	g_cancel_btn_wp[0] = center_x + 20; g_cancel_btn_wp[1] = b + 20;
+	g_cancel_btn_wp[2] = g_cancel_btn_wp[0] + cancel_w + 20; g_cancel_btn_wp[3] = g_cancel_btn_wp[1] + 25;
+
+	// Draw button boxes
+	glColor4fv(gray);
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[1]);
+	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[1]);
+	glVertex2i(g_confirm_btn_wp[2], g_confirm_btn_wp[3]);
+	glVertex2i(g_confirm_btn_wp[0], g_confirm_btn_wp[3]);
+	glEnd();
+
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[1]);
+	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[1]);
+	glVertex2i(g_cancel_btn_wp[2], g_cancel_btn_wp[3]);
+	glVertex2i(g_cancel_btn_wp[0], g_cancel_btn_wp[3]);
+	glEnd();
+
+	XPLMDrawString(white, g_confirm_btn_wp[0] + 10, g_confirm_btn_wp[1] + 7, (char*)confirm_label, NULL, xplmFont_Proportional);
+	XPLMDrawString(white, g_cancel_btn_wp[0] + 10, g_cancel_btn_wp[1] + 7, (char*)cancel_label, NULL, xplmFont_Proportional);
 }
 
 // CALLBACKS
@@ -866,13 +903,13 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 
 int myKeySniffer(char inChar, XPLMKeyFlags inFlags, char inVirtualKey, void* inRefcon)
 {
+	
+	if (!g_typing_waypoint && !g_tod_typing_airport)
+		return 1;
 
 	// Only process on key press, ignore repeats and releases
 	if ((inFlags & xplm_DownFlag) == 0)
 		return 0; // block from going to X-Plane but don’t process
-
-	if (!g_typing_waypoint && !g_tod_typing_airport)
-		return 1;
 
 	if (g_typing_waypoint)
 	{

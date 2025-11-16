@@ -150,9 +150,7 @@ std::string clean_path(char plugin_path[512], char * filename) {
     return file;
 }
 
-char* process_alt(int alt)
-{   
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%03d", alt);
-    return buf;
+void format_alt(int alt, char* buffer)
+{
+    snprintf(buffer, sizeof(buffer), "%03d", alt);
 }
