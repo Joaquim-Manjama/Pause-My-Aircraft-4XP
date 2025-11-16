@@ -475,25 +475,25 @@ void draw_zulu_time_mode(int l, int t, int r, int b, int char_height)
 	XPLMDrawString(white, center_x - 25, mid_y, time_str, NULL, xplmFont_Proportional);
 
 	// Draw hour up/down arrows
-	g_hour_up_btn[0] = center_x - 20; g_hour_up_btn[1] = mid_y + 25;
-	g_hour_up_btn[2] = center_x - 5; g_hour_up_btn[3] = mid_y + 40;
+	g_hour_up_btn[0] = center_x - 25; g_hour_up_btn[1] = mid_y + 25;
+	g_hour_up_btn[2] = center_x - 10; g_hour_up_btn[3] = mid_y + 40;
 
-	g_hour_down_btn[0] = center_x - 20; g_hour_down_btn[1] = mid_y - 40;
-	g_hour_down_btn[2] = center_x - 5; g_hour_down_btn[3] = mid_y - 25;
+	g_hour_down_btn[0] = center_x - 25; g_hour_down_btn[1] = mid_y - 40;
+	g_hour_down_btn[2] = center_x - 10; g_hour_down_btn[3] = mid_y - 25;
 
 	draw_button(g_hour_up_btn, gray, darkgreen, "+", 2, 5);
-	draw_button(g_hour_down_btn, gray, darkred, "-", 6, 5);
+	draw_button(g_hour_down_btn, gray, darkred, "-", 5, 5);
 
 
 	// Draw minute up/down arrows
-	g_min_up_btn[0] = center_x + 5; g_min_up_btn[1] = mid_y + 25;
-	g_min_up_btn[2] = center_x + 20; g_min_up_btn[3] = mid_y + 40;
+	g_min_up_btn[0] = center_x; g_min_up_btn[1] = mid_y + 25;
+	g_min_up_btn[2] = center_x + 15; g_min_up_btn[3] = mid_y + 40;
 
-	g_min_down_btn[0] = center_x + 5; g_min_down_btn[1] = mid_y - 40;
-	g_min_down_btn[2] = center_x + 20; g_min_down_btn[3] = mid_y - 25;
+	g_min_down_btn[0] = center_x; g_min_down_btn[1] = mid_y - 40;
+	g_min_down_btn[2] = center_x + 15; g_min_down_btn[3] = mid_y - 25;
 
 	draw_button(g_min_up_btn, gray, darkgreen, "+", 2, 5);
-	draw_button(g_min_down_btn, gray, darkred, "-", 6, 5);
+	draw_button(g_min_down_btn, gray, darkred, "-", 5, 5);
 
 	// Confirm and Cancel buttons
 	const char* confirm_label = "CONFIRM";
@@ -569,25 +569,25 @@ void draw_waypoint_mode(int l, int t, int r, int b, int char_height)
 	}
 
 	// Up/Down arrows for distance
-	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 25;
-	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 40;
+	g_nm_up_btn[0] = center_x + 25; g_nm_up_btn[1] = mid_y + 5;
+	g_nm_up_btn[2] = center_x + 40; g_nm_up_btn[3] = mid_y + 20;
 
 	draw_button(g_nm_up_btn, gray, darkgreen, "+", 2, 5);
 
-	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 40;
-	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y - 25;
+	g_nm_down_btn[0] = center_x + 25; g_nm_down_btn[1] = mid_y - 20;
+	g_nm_down_btn[2] = center_x + 40; g_nm_down_btn[3] = mid_y - 5;
 
 	draw_button(g_nm_up_btn5, gray, darkgreen, "+", 2, 5);
 
-	g_nm_up_btn5[0] = center_x + 75; g_nm_up_btn5[1] = mid_y + 25;
-	g_nm_up_btn5[2] = center_x + 90; g_nm_up_btn5[3] = mid_y + 40;
+	g_nm_up_btn5[0] = center_x + 50; g_nm_up_btn5[1] = mid_y + 5;
+	g_nm_up_btn5[2] = center_x + 65; g_nm_up_btn5[3] = mid_y + 20;
 
-	draw_button(g_nm_down_btn, gray, darkred, "-", 6, 5);
+	draw_button(g_nm_down_btn, gray, darkred, "-", 5, 5);
 
-	g_nm_down_btn5[0] = center_x + 75; g_nm_down_btn5[1] = mid_y - 40;
-	g_nm_down_btn5[2] = center_x + 90; g_nm_down_btn5[3] = mid_y - 25;
+	g_nm_down_btn5[0] = center_x + 50; g_nm_down_btn5[1] = mid_y - 20;
+	g_nm_down_btn5[2] = center_x + 65; g_nm_down_btn5[3] = mid_y - 5;
 
-	draw_button(g_nm_down_btn5, gray, darkred, "-", 6, 5);
+	draw_button(g_nm_down_btn5, gray, darkred, "-", 5, 5);
 
 
 	// Confirm & Cancel buttons
@@ -667,19 +667,19 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 	draw_button(g_nm_up_btn5, gray, darkgreen, "+", 2, 5);
 
 	// MINUS 100
-	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 20;
-	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y - 5;
-	draw_button(g_nm_down_btn, gray, darkred, "-", 6, 5);
+	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 10;
+	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y + 5;
+	draw_button(g_nm_down_btn, gray, darkred, "-", 5, 5);
 
 	// MINUS 10
-	g_nm_down_btn2[0] = center_x + 70; g_nm_down_btn2[1] = mid_y - 20;
-	g_nm_down_btn2[2] = center_x + 85; g_nm_down_btn2[3] = mid_y - 5;
-	draw_button(g_nm_down_btn2, gray, darkred, "-", 6, 5);
+	g_nm_down_btn2[0] = center_x + 70; g_nm_down_btn2[1] = mid_y - 10;
+	g_nm_down_btn2[2] = center_x + 85; g_nm_down_btn2[3] = mid_y + 5;
+	draw_button(g_nm_down_btn2, gray, darkred, "-", 5, 5);
 
 	// MINUS 1
-	g_nm_down_btn5[0] = center_x + 95; g_nm_down_btn5[1] = mid_y - 20;
-	g_nm_down_btn5[2] = center_x + 110; g_nm_down_btn5[3] = mid_y - 5;
-	draw_button(g_nm_down_btn5, gray, darkred, "-", 6, 5);
+	g_nm_down_btn5[0] = center_x + 95; g_nm_down_btn5[1] = mid_y - 10;
+	g_nm_down_btn5[2] = center_x + 110; g_nm_down_btn5[3] = mid_y + 5;
+	draw_button(g_nm_down_btn5, gray, darkred, "-", 5, 5);
 
 	// Destination Airport label
 	XPLMDrawString(white, l + 30, mid_y - 10, (char*)"Destination Airport:", NULL, xplmFont_Proportional);
