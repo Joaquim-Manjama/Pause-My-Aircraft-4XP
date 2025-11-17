@@ -120,7 +120,9 @@ char g_tod_airport_input[16] = "";
 struct TODTarget {
 	int cruise_alt_ft = 0;
 	char dest_airport[16] = "";
+	float airport_coords[2];
 	bool is_set = false;
+	int nm = 0;
 };
 
 TODTarget g_tod_target;
@@ -146,7 +148,6 @@ float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
 float darkgreen[] = { 0.0f, 0.4f, 0.0f, 1.0f };
 float darkred[] = { 0.4f, 0.0f, 0.0f, 1.0f };
 float blue[] = { 0.0, 1.0, 1.0, 1.0 };
-float red[] = { 1.0, 0.0, 0.0, 1.0 };
 float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
 float yellow[] = { 1.0f, 0.8f, 0.2f, 1.0f };
 
@@ -296,35 +297,27 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 	{
 		const int is_popped_out = XPLMWindowIsPoppedOut(in_window_id);
 		if (!XPLMIsWindowInFront(in_window_id))
-		{
 			XPLMBringWindowToFront(in_window_id);
-		}
 		else
 		{
 			if (current_mode == ZULU_TIME)
 			{
-				if (coord_in_rect(x, y, g_hour_up_btn)) {
+				if (coord_in_rect(x, y, g_hour_up_btn))
 					g_zulu_target.hours = (g_zulu_target.hours + 1) % 24;
-				}
-				else if (coord_in_rect(x, y, g_hour_down_btn)) {
+				else if (coord_in_rect(x, y, g_hour_down_btn)) 
 					g_zulu_target.hours = (g_zulu_target.hours + 23) % 24;
-				}
-				else if (coord_in_rect(x, y, g_min_up_btn)) {
+				else if (coord_in_rect(x, y, g_min_up_btn)) 
 					g_zulu_target.minutes = (g_zulu_target.minutes + 1) % 60;
-				}
-				else if (coord_in_rect(x, y, g_min_down_btn)) {
+				else if (coord_in_rect(x, y, g_min_down_btn)) 
 					g_zulu_target.minutes = (g_zulu_target.minutes + 59) % 60;
-				}
 				else if (coord_in_rect(x, y, g_confirm_btn)) {
 					if (!g_flight_loop_active) 
 					{
 						XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
 						g_flight_loop_active = true;
 					}
-					
 					g_zulu_target.is_set = true;
 					g_flight_loop_active = true;
-					
 				}
 				else if (coord_in_rect(x, y, g_cancel_btn)) {
 					g_zulu_target.is_set = false;
@@ -335,9 +328,7 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			{
 				if (coord_in_rect(x, y, g_click_here_box)) {
 					if (g_typing_waypoint)
-					{
 						g_typing_waypoint = false;
-					}
 					else
 					{
 						g_typing_waypoint = true;
@@ -345,26 +336,18 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 					}
 				}
 				else if (coord_in_rect(x, y, g_nm_up_btn))
-				{
 					g_waypoint_target.distance_nm += 1;
-				}
 				else if (coord_in_rect(x, y, g_nm_down_btn))
 				{
 					if (g_waypoint_target.distance_nm > 0)
-					{
 						g_waypoint_target.distance_nm -= 1;
-					}
 				}
 				else if (coord_in_rect(x, y, g_nm_up_btn5))
-				{
 					g_waypoint_target.distance_nm += 5;
-				}
 				else if (coord_in_rect(x, y, g_nm_down_btn5))
 				{
 					if (g_waypoint_target.distance_nm > 4)
-					{
 						g_waypoint_target.distance_nm -= 5;
-					}
 				}
 				else if (coord_in_rect(x, y, g_confirm_btn))
 				{
@@ -396,47 +379,74 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			}
 			else if (current_mode == TOD)
 			{
-				if (coord_in_rect(x, y, g_nm_up_btn)) {
+				if (coord_in_rect(x, y, g_nm_up_btn))
+				{
 					if (g_tod_cruise_input < 900)
 						g_tod_cruise_input += 100;
 				}
 
-				if (coord_in_rect(x, y, g_nm_up_btn2)) {
+				if (coord_in_rect(x, y, g_nm_up_btn2)) 
+				{
 					if (g_tod_cruise_input < 990)
 						g_tod_cruise_input += 10;
 				}
 
-				if (coord_in_rect(x, y, g_nm_up_btn5)) {
+				if (coord_in_rect(x, y, g_nm_up_btn5)) 
+				{
 					if (g_tod_cruise_input < 999)
 						g_tod_cruise_input += 1;
 				}
 
-				if (coord_in_rect(x, y, g_nm_down_btn)) {
+				if (coord_in_rect(x, y, g_nm_down_btn)) 
+				{
 					if (g_tod_cruise_input > 99)
 						g_tod_cruise_input -= 100;
 				}
 
-				if (coord_in_rect(x, y, g_nm_down_btn2)) {
+				if (coord_in_rect(x, y, g_nm_down_btn2)) 
+				{
 					if (g_tod_cruise_input > 9)
 						g_tod_cruise_input -= 10;
 				}
 
-				if (coord_in_rect(x, y, g_nm_down_btn5)) {
+				if (coord_in_rect(x, y, g_nm_down_btn5)) 
+				{
 					if (g_tod_cruise_input > 0)
 						g_tod_cruise_input -= 1;
 				}
 
-				if (coord_in_rect(x, y, g_click_here_box)) {
+				if (coord_in_rect(x, y, g_click_here_box)) 
+				{
 					if (g_tod_typing_airport)
-					{
 						g_tod_typing_airport = false;
-					}
 					else
 					{
 						g_tod_typing_airport = true;
 						g_tod_airport_input[0] = '\0';
 					}
 				}
+
+				if (coord_in_rect(x, y, g_confirm_btn))
+				{
+					if (is_valid_airport(std::string(g_tod_airport_input), airport_file))
+					{
+						g_tod_target.cruise_alt_ft = g_tod_cruise_input;
+						strncpy(g_tod_target.dest_airport, g_tod_airport_input, sizeof(g_tod_target.dest_airport) - 1);
+						g_tod_target.dest_airport[sizeof(g_tod_target.dest_airport) - 1] = '\0';
+						g_tod_target.is_set = true;
+						if (!g_flight_loop_active)
+						{
+							g_flight_loop_active = true;
+							XPLMRegisterFlightLoopCallback(flight_loop_callback, 1.0f, NULL);
+							
+						}
+						g_tod_target.nm = get_tod(std::string(g_tod_target.dest_airport), g_tod_target.cruise_alt_ft, airport_file);
+						get_airport_coords(std::string(g_tod_target.dest_airport), g_tod_target.airport_coords, airport_file);
+					}
+				}
+
+				if (coord_in_rect(x, y, g_cancel_btn))
+					g_tod_target.is_set = false;
 			}
 		}
 	}
@@ -750,6 +760,18 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 	g_cancel_btn[2] = g_cancel_btn[0] + cancel_w + 20; g_cancel_btn[3] = g_cancel_btn[1] + 25;
 
 	draw_button(g_cancel_btn, gray, black, (char*)cancel_label, 10, 7);
+
+	if (g_tod_target.is_set)
+	{
+		char info[60];
+		char remaining[60];
+
+		std::snprintf(info, sizeof(info), "Target: %dNM from %s", g_tod_target.nm, g_tod_target.dest_airport);
+		std::snprintf(remaining, sizeof(remaining), "Distance Left: %d NM", (int)km_to_nm(get_distance_km(g_player_pos, g_tod_target.airport_coords)) - g_tod_target.nm);
+
+		XPLMDrawString(green, l + 15, b + 55, info, NULL, xplmFont_Proportional);
+		XPLMDrawString(blue, l + 15, b + char_height, remaining, NULL, xplmFont_Proportional);
+	}
 }
 
 // CALLBACKS
@@ -784,7 +806,24 @@ float flight_loop_callback(float elapsedMe, float elapsedSim, int counter, void*
 		}
 	}
 
-	if (!g_zulu_target.is_set && !g_waypoint_target.is_set)
+	if (g_tod_target.is_set)
+	{
+		g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
+		g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
+		// check every time this function runs
+		if (detect_collision(g_tod_target.nm, g_player_pos, g_tod_target.airport_coords))
+		{
+			pause_sim(); // pause when within distance
+			g_tod_target.nm = 0; // reset distance
+			g_tod_target.dest_airport[0] = '\0'; // clear airport
+			g_tod_airport_input[0] = '\0'; // clear input
+			g_waypoint_target.coords[0] = 0.0; // reset coords
+			g_waypoint_target.coords[1] = 0.0; // reset coords
+			g_tod_target.is_set = false;
+		}
+	}
+
+	if (!g_zulu_target.is_set && !g_waypoint_target.is_set && !g_tod_target.is_set)
 	{
 		if (g_flight_loop_active)
 		{

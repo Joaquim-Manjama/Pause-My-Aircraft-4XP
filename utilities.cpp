@@ -125,13 +125,126 @@ bool detect_collision(int diameter, float player_coords[2], float waypoint_coord
 {
 	float distance = km_to_nm(get_distance_km(player_coords, waypoint_coords));
     
-    if (distance <= diameter)
+    if ((distance + 1) <= diameter)
     {
         return true;
     }
     return false;
 }
 
+// TOD
+void format_alt(int alt, char* buffer)
+{
+    snprintf(buffer, sizeof(buffer), "%03d", alt);
+}
+
+bool is_valid_airport(std::string airport, std::string path)
+{
+    // Create a text string, which is used to output the text file
+    std::string text;
+    std::string current_airport;
+
+    // Read from the text file
+    std::ifstream MyReadFile(path);
+
+    // Use a while loop together with the getline() function to read the file line by line
+    while (std::getline(MyReadFile, text))
+    {
+        // Output the text from the file
+        current_airport = text.substr(text.find(",") + 1, 4);
+        if (current_airport == airport)
+        {
+            return true;
+        }
+    }
+
+    // Close the file
+    MyReadFile.close();
+
+    return false;
+}
+
+int get_ground_elevation(std::string airport, std::string path)
+{
+    // Create a text string, which is used to output the text file
+    std::string text;
+    std::string current_airport;
+    int elevation = 0.0;
+
+    // Read from the text file
+    std::ifstream MyReadFile(path);
+
+    // Use a while loop together with the getline() function to read the file line by line
+    while (std::getline(MyReadFile, text))
+    {
+        int one = text.find(",");
+        int two = text.find(",", one + 1);
+        int three = text.find(",", two + 1);
+        int four = text.find(",", three + 1);
+        int five = text.find(",", four + 1);
+        int six = text.find(",", five + 1);
+
+        // Output the text from the file
+        current_airport = text.substr(text.find(",") + 1, 4);
+        if (current_airport == airport)
+        {
+            elevation = std::stoi(text.substr(five + 1, six - five - 1));
+        }
+    }
+
+    // Close the file
+    MyReadFile.close();
+
+    return elevation;
+}
+
+int get_tod(std::string airport, int cruise, std::string path)
+{
+    int elevation = get_ground_elevation(airport, path);
+    int cruising_altitude = cruise * 100;
+    const int drop_per_nm_ft = 318.5;
+    const int margin_nm = 10;
+
+    int tod_nm = std::ceil((cruising_altitude - elevation) / drop_per_nm_ft);
+
+    return tod_nm + margin_nm;
+}
+
+void get_airport_coords(std::string airport, float* arr, std::string path)
+{
+    // Create a text string, which is used to output the text file
+    std::string text;
+    std::string current_airport;
+    int elevation = 0.0;
+
+    // Read from the text file
+    std::ifstream MyReadFile(path);
+
+    // Use a while loop together with the getline() function to read the file line by line
+    while (std::getline(MyReadFile, text))
+    {
+        int one = text.find(",");
+        int two = text.find(",", one + 1);
+        int three = text.find(",", two + 1);
+        int four = text.find(",", three + 1);
+        int five = text.find(",", four + 1);
+
+        // Output the text from the file
+        current_airport = text.substr(text.find(",") + 1, 4);
+        if (current_airport == airport)
+        {
+            float latitude = std::stof(text.substr(three + 1, four - three - 1));
+            float longitude = std::stof(text.substr(four + 1, five - four - 1));
+            arr[0] = latitude;
+            arr[1] = longitude;
+        }
+    }
+
+    // Close the file
+    MyReadFile.close();
+}
+
+// FILE PATH
 std::string clean_path(char plugin_path[512], char * filename) {
     std::string basePath(plugin_path);
     size_t pos = basePath.find("Resources");
@@ -150,7 +263,3 @@ std::string clean_path(char plugin_path[512], char * filename) {
     return file;
 }
 
-void format_alt(int alt, char* buffer)
-{
-    snprintf(buffer, sizeof(buffer), "%03d", alt);
-}
