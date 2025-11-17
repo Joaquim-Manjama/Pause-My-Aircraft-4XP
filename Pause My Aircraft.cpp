@@ -114,7 +114,7 @@ char g_waypoint_input[10] = "";    // Temp buffer for typing
 bool g_tod_typing_cruise = false;
 bool g_tod_typing_airport = false;
 
-char g_tod_cruise_input[32] = "";
+int g_tod_cruise_input = 0;
 char g_tod_airport_input[16] = "";
 
 struct TODTarget {
@@ -396,6 +396,36 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 			}
 			else if (current_mode == TOD)
 			{
+				if (coord_in_rect(x, y, g_nm_up_btn)) {
+					if (g_tod_cruise_input < 900)
+						g_tod_cruise_input += 100;
+				}
+
+				if (coord_in_rect(x, y, g_nm_up_btn2)) {
+					if (g_tod_cruise_input < 990)
+						g_tod_cruise_input += 10;
+				}
+
+				if (coord_in_rect(x, y, g_nm_up_btn5)) {
+					if (g_tod_cruise_input < 999)
+						g_tod_cruise_input += 1;
+				}
+
+				if (coord_in_rect(x, y, g_nm_down_btn)) {
+					if (g_tod_cruise_input > 99)
+						g_tod_cruise_input -= 100;
+				}
+
+				if (coord_in_rect(x, y, g_nm_down_btn2)) {
+					if (g_tod_cruise_input > 9)
+						g_tod_cruise_input -= 10;
+				}
+
+				if (coord_in_rect(x, y, g_nm_down_btn5)) {
+					if (g_tod_cruise_input > 0)
+						g_tod_cruise_input -= 1;
+				}
+
 				if (coord_in_rect(x, y, g_click_here_box)) {
 					if (g_tod_typing_airport)
 					{
@@ -642,7 +672,7 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 	// Cruising Altitude input display
 	char alt_str[20];
 	char alt_buffer[8];
-	format_alt(g_tod_target.cruise_alt_ft, alt_buffer);
+	format_alt(g_tod_cruise_input, alt_buffer);
 
 	std::snprintf(alt_str, sizeof(alt_str), "FL %s", alt_buffer);
 
@@ -652,33 +682,33 @@ void draw_tod_mode(int l, int t, int r, int b, int char_height)
 	// FL BUTTONS
 
 	// PLUS 100
-	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 25;
-	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 40;
+	g_nm_up_btn[0] = center_x + 45; g_nm_up_btn[1] = mid_y + 30;
+	g_nm_up_btn[2] = center_x + 60; g_nm_up_btn[3] = mid_y + 45;
 	draw_button(g_nm_up_btn, gray, darkgreen, "+", 2, 5);
 
 	// PLUS 10
-	g_nm_up_btn2[0] = center_x + 70; g_nm_up_btn2[1] = mid_y + 25;
-	g_nm_up_btn2[2] = center_x + 85; g_nm_up_btn2[3] = mid_y + 40;
+	g_nm_up_btn2[0] = center_x + 70; g_nm_up_btn2[1] = mid_y + 30;
+	g_nm_up_btn2[2] = center_x + 85; g_nm_up_btn2[3] = mid_y + 45;
 	draw_button(g_nm_up_btn2, gray, darkgreen, "+", 2, 5);
 
 	// PLUS 1
-	g_nm_up_btn5[0] = center_x + 95; g_nm_up_btn5[1] = mid_y + 25;
-	g_nm_up_btn5[2] = center_x + 110; g_nm_up_btn5[3] = mid_y + 40;
+	g_nm_up_btn5[0] = center_x + 95; g_nm_up_btn5[1] = mid_y + 30;
+	g_nm_up_btn5[2] = center_x + 110; g_nm_up_btn5[3] = mid_y + 45;
 	draw_button(g_nm_up_btn5, gray, darkgreen, "+", 2, 5);
 
 	// MINUS 100
-	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 10;
-	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y + 5;
+	g_nm_down_btn[0] = center_x + 45; g_nm_down_btn[1] = mid_y - 5;
+	g_nm_down_btn[2] = center_x + 60; g_nm_down_btn[3] = mid_y + 10;
 	draw_button(g_nm_down_btn, gray, darkred, "-", 5, 5);
 
 	// MINUS 10
-	g_nm_down_btn2[0] = center_x + 70; g_nm_down_btn2[1] = mid_y - 10;
-	g_nm_down_btn2[2] = center_x + 85; g_nm_down_btn2[3] = mid_y + 5;
+	g_nm_down_btn2[0] = center_x + 70; g_nm_down_btn2[1] = mid_y - 5;
+	g_nm_down_btn2[2] = center_x + 85; g_nm_down_btn2[3] = mid_y + 10;
 	draw_button(g_nm_down_btn2, gray, darkred, "-", 5, 5);
 
 	// MINUS 1
-	g_nm_down_btn5[0] = center_x + 95; g_nm_down_btn5[1] = mid_y - 10;
-	g_nm_down_btn5[2] = center_x + 110; g_nm_down_btn5[3] = mid_y + 5;
+	g_nm_down_btn5[0] = center_x + 95; g_nm_down_btn5[1] = mid_y - 5;
+	g_nm_down_btn5[2] = center_x + 110; g_nm_down_btn5[3] = mid_y + 10;
 	draw_button(g_nm_down_btn5, gray, darkred, "-", 5, 5);
 
 	// Destination Airport label
