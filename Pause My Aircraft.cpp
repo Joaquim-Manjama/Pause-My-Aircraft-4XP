@@ -159,7 +159,7 @@ PLUGIN_API int XPluginStart(
 							char *		outDesc)
 {
 	strcpy(outName, "Pause My Aircraft Plugin");
-	strcpy(outSig, "joaquimmanjama.pausemyaircraft");
+	strcpy(outSig, "joaquimmanjama.pausemyaircraft1.0.0");
 	strcpy(outDesc, "A plugin that pauses your aircraft for you!");
 
 	// MENU

@@ -125,7 +125,7 @@ bool detect_collision(int diameter, float player_coords[2], float waypoint_coord
 {
 	float distance = km_to_nm(get_distance_km(player_coords, waypoint_coords));
     
-    if ((distance + 1) <= diameter)
+    if (distance <= (diameter + 1))
     {
         return true;
     }
