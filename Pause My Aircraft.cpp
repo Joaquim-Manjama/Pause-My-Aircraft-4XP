@@ -146,6 +146,7 @@ float black[] = { 0.0, 0.0, 0.0, 0.0 };
 float white[] = { 1.0, 1.0, 1.0, 1.0 };
 float green[] = { 0.0f, 1.0f, 0.0f, 1.0f };
 float darkgreen[] = { 0.0f, 0.4f, 0.0f, 1.0f };
+float red[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 float darkred[] = { 0.4f, 0.0f, 0.0f, 1.0f };
 float blue[] = { 0.0, 1.0, 1.0, 1.0 };
 float gray[] = { 0.6f, 0.6f, 0.6f, 1.0f };
@@ -493,6 +494,32 @@ void menu_handler(void* in_menu_ref, void* in_item_ref)
 // ABOUT MODE
 void draw_about_mode(int l, int t, int r, int b, int char_height)
 {
+	int center_x = (l + r) / 2;
+
+	// Title
+	XPLMDrawString(yellow, l + 20, t - 30, (char*)"ABOUT — Pause My Aircraft", NULL, xplmFont_Proportional);
+
+	// Description
+	XPLMDrawString(white, l + 20, t - 60,
+		(char*)"A utility plugin that pauses your aircraft for you!", NULL, xplmFont_Proportional);
+
+	// Features List
+	XPLMDrawString(yellow, l + 20, t - 100, (char*)"Features:", NULL, xplmFont_Proportional);
+
+	XPLMDrawString(white, l + 40, t - 115, (char*)"- Zulu time auto-pause", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, l + 40, t - 130, (char*)"- Waypoint distance pause", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, center_x + 40, t - 115, (char*)"- Top-of-Descent (TOD) pause", NULL, xplmFont_Proportional);
+
+	// Author
+	XPLMDrawString(yellow, l + 20, t - 155, (char*)"Author:", NULL, xplmFont_Proportional);
+	XPLMDrawString(white, l + 40, t - 170, (char*)"Joaquim Manjama", NULL, xplmFont_Proportional);
+
+	// Optional GitHub link
+	XPLMDrawString(yellow, l + 20, t - 210,
+		(char*)"Updates & feedback:", NULL, xplmFont_Proportional);
+
+	XPLMDrawString(white, l + 40, t - 225,
+		(char*)"github.com/Joaquim-Manjama/Pause-My-Aircraft-4XP", NULL, xplmFont_Proportional);
 }
 
 // ZULU TIME MODE
