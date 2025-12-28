@@ -3,7 +3,6 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
-#include <array> 
 #include <limits> 
 
 // ZULU TIME
@@ -39,8 +38,8 @@ bool check_time_to_pause(int target_hour, int target_minute)
 // WAYPOINT
 void get_coordinates(std::string waypoint, float * arr, std::string path, float playerCoords[2])
 {
-    // Store all coordinates with the same name
-    std::vector<std::array<float, 2>> coordinates;
+    float min_distance = std::numeric_limits<float>::max();
+    bool found = false;
 
     // Create a text string, which is used to output the text file
     std::string text;
@@ -60,31 +59,21 @@ void get_coordinates(std::string waypoint, float * arr, std::string path, float 
         {
             latitude = std::stof(text.substr(text.find(",") + 1, text.find(",", text.find(",") + 1)));
             longitude = std::stof(text.substr(text.find(",", text.find(",") + 1) + 1));
-            coordinates.push_back({ latitude, longitude });
-        }
-    }
+			found = true;
+            float waypoint_arr[2] = { latitude, longitude };
 
-	// If multiple coordinates found, select the one closest to (0,0)
-    // If multiple coordinates found, select the one closest to playerCoords
-    if (!coordinates.empty())
-    {
-        float min_distance = std::numeric_limits<float>::max();
-        std::array<float, 2> closest_coord = coordinates[0];
-
-        for (const auto& coord : coordinates)
-        {
-            float waypoint_arr[2] = { coord[0], coord[1] };
             float distance = get_distance_km(playerCoords, waypoint_arr);
             if (distance < min_distance)
             {
                 min_distance = distance;
-                closest_coord = coord;
+                arr[0] = waypoint_arr[0];
+                arr[1] = waypoint_arr[1];
             }
         }
-        if (arr != nullptr)
+        else
         {
-            arr[0] = closest_coord[0];
-            arr[1] = closest_coord[1];
+            if (found)
+				break; // Exit loop if we've already found the waypoint and moved past its entries
         }
     }
 
