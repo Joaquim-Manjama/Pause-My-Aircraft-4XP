@@ -355,7 +355,7 @@ int handle_mouse(XPLMWindowID in_window_id, int x, int y, int is_down, void* in_
 					if (is_valid_waypoint(std::string(g_waypoint_target.name), waypoint_file))
 					{
 						g_waypoint_target.is_set = true;
-						get_coordinates(std::string(g_waypoint_target.name), g_waypoint_target.coords, waypoint_file);
+						get_coordinates(std::string(g_waypoint_target.name), g_waypoint_target.coords, waypoint_file, g_player_pos);
 						g_player_pos[0] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/latitude"));
 						g_player_pos[1] = XPLMGetDataf(XPLMFindDataRef("sim/flightmodel/position/longitude"));
 

@@ -2,6 +2,9 @@
 #include <chrono>
 #include <fstream>
 #include <cmath>
+#include <vector>
+#include <array> 
+#include <limits> 
 
 // ZULU TIME
 void get_current_utc_time(int& hour, int& minute)
@@ -34,8 +37,11 @@ bool check_time_to_pause(int target_hour, int target_minute)
 }
 
 // WAYPOINT
-void get_coordinates(std::string waypoint, float * arr, std::string path)
+void get_coordinates(std::string waypoint, float * arr, std::string path, float playerCoords[2])
 {
+    // Store all coordinates with the same name
+    std::vector<std::array<float, 2>> coordinates;
+
     // Create a text string, which is used to output the text file
     std::string text;
     std::string current_waypoint;
@@ -43,6 +49,7 @@ void get_coordinates(std::string waypoint, float * arr, std::string path)
 
     // Read from the text file
     std::ifstream MyReadFile(path);
+    if (!MyReadFile.is_open()) return;
 
     // Use a while loop together with the getline() function to read the file line by line
     while (std::getline(MyReadFile, text))
@@ -53,8 +60,31 @@ void get_coordinates(std::string waypoint, float * arr, std::string path)
         {
             latitude = std::stof(text.substr(text.find(",") + 1, text.find(",", text.find(",") + 1)));
             longitude = std::stof(text.substr(text.find(",", text.find(",") + 1) + 1));
-            arr[0] = latitude;
-            arr[1] = longitude;
+            coordinates.push_back({ latitude, longitude });
+        }
+    }
+
+	// If multiple coordinates found, select the one closest to (0,0)
+    // If multiple coordinates found, select the one closest to playerCoords
+    if (!coordinates.empty())
+    {
+        float min_distance = std::numeric_limits<float>::max();
+        std::array<float, 2> closest_coord = coordinates[0];
+
+        for (const auto& coord : coordinates)
+        {
+            float waypoint_arr[2] = { coord[0], coord[1] };
+            float distance = get_distance_km(playerCoords, waypoint_arr);
+            if (distance < min_distance)
+            {
+                min_distance = distance;
+                closest_coord = coord;
+            }
+        }
+        if (arr != nullptr)
+        {
+            arr[0] = closest_coord[0];
+            arr[1] = closest_coord[1];
         }
     }
 
@@ -90,23 +120,23 @@ bool is_valid_waypoint(std::string waypoint, std::string path)
 
 float nm_to_km(int value)
 {
-    return value * 1.852;
+    return (float) value * 1.852;
 }
 
 float km_to_nm(float value)
 {
-	return value / 1.852;
+	return (float) value / 1.852;
 }
 
 float haversine(float lat1, float lon1, float lat2, float lon2)
 {
     const float R = 6371.0; // Radius of the Earth in kilometers
     const double PI = 3.14159265358979323846;
-    float dLat = (lat2 - lat1) * PI / 180.0;
-    float dLon = (lon2 - lon1) * PI / 180.0;
+    float dLat = (float) (lat2 - lat1) * PI / 180.0;
+    float dLon = (float) (lon2 - lon1) * PI / 180.0;
 
-    lat1 = lat1 * PI / 180.0;
-    lat2 = lat2 * PI / 180.0;
+    lat1 = (float) lat1 * PI / 180.0;
+    lat2 = (float) lat2 * PI / 180.0;
 
     float a = sin(dLat / 2) * sin(dLat / 2) +
         sin(dLon / 2) * sin(dLon / 2) * cos(lat1) * cos(lat2);
@@ -169,7 +199,7 @@ int get_ground_elevation(std::string airport, std::string path)
     // Create a text string, which is used to output the text file
     std::string text;
     std::string current_airport;
-    int elevation = 0.0;
+    int elevation = 0;
 
     // Read from the text file
     std::ifstream MyReadFile(path);
@@ -177,7 +207,7 @@ int get_ground_elevation(std::string airport, std::string path)
     // Use a while loop together with the getline() function to read the file line by line
     while (std::getline(MyReadFile, text))
     {
-        int one = text.find(",");
+        int one = (int) text.find(",");
         int two = text.find(",", one + 1);
         int three = text.find(",", two + 1);
         int four = text.find(",", three + 1);

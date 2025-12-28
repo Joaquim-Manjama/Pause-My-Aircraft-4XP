@@ -7,7 +7,7 @@ void get_current_utc_time(int& hour, int& minute);
 
 // WAYPOINT
 bool is_valid_waypoint(std::string waypoint, std::string path);
-void get_coordinates(std::string waypoint, float* arr, std::string path);
+void get_coordinates(std::string waypoint, float* arr, std::string path, float playerCoords[2]);
 float nm_to_km(int value);
 float km_to_nm(float value);
 float get_distance_km(float player_coords[2], float waypoint_coords[2]);
